@@ -1,6 +1,6 @@
 /*
- * Nature-Botanical GTK4 & Libadwaita Theme
- * Palette: Deep Forest Slate (#0D1311), Moss Surface (#151F1B), Emerald Accent (#2E8B57)
+ * Nature-Botanical & Horizon Slate GTK4 / Libadwaita Theme
+ * Supports Nature (Dark/Light) and Horizon (Dark/Light) palettes
  */
 
 @define-color nature_bg_base #0D1311;
@@ -10,9 +10,43 @@
 @define-color nature_accent #2E8B57;
 @define-color nature_border rgba(232, 239, 234, 0.08);
 
+/* Nature Light Tokens */
+@define-color nature_light_bg_base #F3F8F4;
+@define-color nature_light_bg_elevated #FFFFFF;
+@define-color nature_light_fg_primary #122119;
+@define-color nature_light_fg_muted #556B5E;
+@define-color nature_light_accent #227347;
+@define-color nature_light_border rgba(18, 33, 25, 0.10);
+
+/* Horizon Dark & Light Tokens */
+@define-color horizon_bg_base #090D16;
+@define-color horizon_bg_elevated #111827;
+@define-color horizon_fg_primary #F1F5F9;
+@define-color horizon_fg_muted #94A3B8;
+@define-color horizon_accent #2563EB;
+@define-color horizon_light_bg_base #F4F7FB;
+@define-color horizon_light_bg_elevated #FFFFFF;
+@define-color horizon_light_fg_primary #0F172A;
+@define-color horizon_light_fg_muted #475569;
+
 window {
   background-color: @nature_bg_base;
   color: @nature_fg_primary;
+}
+
+window.light-mode {
+  background-color: @nature_light_bg_base;
+  color: @nature_light_fg_primary;
+}
+
+window.horizon-theme {
+  background-color: @horizon_bg_base;
+  color: @horizon_fg_primary;
+}
+
+window.horizon-theme.light-mode {
+  background-color: @horizon_light_bg_base;
+  color: @horizon_light_fg_primary;
 }
 
 headerbar {
@@ -25,15 +59,27 @@ headerbar {
 .nature-top-panel {
   background-color: rgba(11, 16, 14, 0.84);
   color: @nature_fg_primary;
-  border-bottom: 1px solid @nature_border;
+  border: 1px solid @nature_border;
+  border-radius: 13px;
   font-size: 13px;
   font-weight: 500;
 }
 
+.nature-top-panel.light-mode {
+  background-color: rgba(255, 255, 255, 0.88);
+  color: @nature_light_fg_primary;
+  border-color: @nature_light_border;
+}
+
 .nature-dock-container {
   background-color: rgba(19, 28, 24, 0.82);
-  border: 1px solid rgba(232, 239, 234, 0.12);
-  border-radius: 16px;
+  border: 1px solid rgba(232, 239, 234, 0.14);
+  border-radius: 17px;
+}
+
+.nature-dock-container.light-mode {
+  background-color: rgba(255, 255, 255, 0.86);
+  border-color: @nature_light_border;
 }
 
 .nature-dock-item {
@@ -51,4 +97,26 @@ button.suggested-action {
   background-color: @nature_accent;
   color: #FFFFFF;
   border-radius: 8px;
+}
+
+.nature-modal-scrim {
+  background-color: rgba(0, 0, 0, 0.65);
+}
+
+.nature-modal-card {
+  border-radius: 16px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.nature-alt-tab-hud {
+  border-radius: 18px;
+  background-color: rgba(17, 24, 39, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.nature-editor-pane {
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
 }

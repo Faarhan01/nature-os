@@ -1,17 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="nature-os">
   <schema id="org.natureos.desktop" path="/org/natureos/desktop/">
+    <key name="theme-family" type="s">
+      <default>'nature'</default>
+      <summary>Desktop design family ('nature' or 'horizon')</summary>
+    </key>
     <key name="color-scheme" type="s">
       <default>'dark'</default>
       <summary>Desktop color theme ('dark' or 'light')</summary>
     </key>
     <key name="accent-color" type="s">
       <default>'moss'</default>
-      <summary>Botanical accent preset</summary>
+      <summary>Theme accent preset (6 presets per theme family)</summary>
     </key>
     <key name="wallpaper-uri" type="s">
       <default>'file:///usr/share/backgrounds/nature-os/canopy-dawn.jpg'</default>
-      <summary>Active desktop wallpaper path</summary>
+      <summary>Active desktop wallpaper path or 'horizon://slate'</summary>
     </key>
     <key name="dock-position" type="s">
       <default>'bottom'</default>
@@ -22,6 +26,22 @@
       <range min="28" max="56"/>
       <summary>Dock icon pixel size</summary>
     </key>
+    <key name="clock-24h" type="b">
+      <default>true</default>
+      <summary>Use 24-hour clock format in top panel and ambient widgets</summary>
+    </key>
+    <key name="show-seconds" type="b">
+      <default>false</default>
+      <summary>Display seconds in the panel clock</summary>
+    </key>
+    <key name="window-snap" type="b">
+      <default>true</default>
+      <summary>Snap windows to screen edges when dragging</summary>
+    </key>
+    <key name="show-desktop-widgets" type="b">
+      <default>true</default>
+      <summary>Show ambient clock and workspace hint widgets on desktop</summary>
+    </key>
     <key name="low-power-transparency" type="b">
       <default>false</default>
       <summary>Disable backdrop blur to minimize GPU memory bandwidth</summary>
@@ -29,6 +49,19 @@
     <key name="compositor-refresh-hz" type="i">
       <default>60</default>
       <summary>Target frame pacing rate for nature-compositor</summary>
+    </key>
+    <key name="device-name" type="s">
+      <default>'nature-pc'</default>
+      <summary>Editable workstation hostname shown across shell, terminal, and settings</summary>
+    </key>
+    <key name="night-light-warmth" type="i">
+      <default>65</default>
+      <range min="20" max="100"/>
+      <summary>Warm filter intensity percentage when Night Light is enabled</summary>
+    </key>
+    <key name="show-toast-popups" type="b">
+      <default>true</default>
+      <summary>Show transient toast notification banners on desktop</summary>
     </key>
     <key name="pinned-apps" type="as">
       <default>['org.natureos.Files.desktop', 'org.natureos.Browser.desktop', 'org.natureos.Terminal.desktop', 'org.natureos.Store.desktop', 'org.natureos.Monitor.desktop', 'org.natureos.Media.desktop', 'org.natureos.Settings.desktop']</default>

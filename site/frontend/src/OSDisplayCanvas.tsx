@@ -595,6 +595,8 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
       e.key === 'Enter' ||
       e.key === 'ArrowUp' ||
       e.key === 'ArrowDown' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
       e.key === 'Tab' ||
       e.key === 'Escape'
     ) {
@@ -653,7 +655,13 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
       sendCommand('K Escape');
       setShowMobileKeyboard(false);
       mobileInputRef.current?.blur();
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Tab') {
+    } else if (
+      e.key === 'ArrowUp' ||
+      e.key === 'ArrowDown' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.key === 'Tab'
+    ) {
       e.preventDefault();
       sendCommand(`K ${e.key}`);
     }
@@ -802,7 +810,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
           </div>
           {showMobileKeyboard && (
             <div className="flex items-center gap-1 overflow-x-auto text-[11px] font-mono">
-              {(['Escape', 'Tab', 'ArrowUp', 'ArrowDown'] as const).map((k) => (
+              {(['Escape', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] as const).map((k) => (
                 <button
                   key={k}
                   type="button"
@@ -812,7 +820,17 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
                   }}
                   className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-neutral-200 hover:bg-white/10 min-h-[28px]"
                 >
-                  {k === 'Escape' ? 'Esc' : k === 'ArrowUp' ? '↑' : k === 'ArrowDown' ? '↓' : 'Tab'}
+                  {k === 'Escape'
+                    ? 'Esc'
+                    : k === 'ArrowLeft'
+                      ? '←'
+                      : k === 'ArrowRight'
+                        ? '→'
+                        : k === 'ArrowUp'
+                          ? '↑'
+                          : k === 'ArrowDown'
+                            ? '↓'
+                            : 'Tab'}
                 </button>
               ))}
               <button

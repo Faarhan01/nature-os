@@ -117,19 +117,28 @@ static void input_reader_thread() {
                 }
             } else if (line[0] == 'P' && line[1] == ' ') {
                 int wp = 0;
-                if (std::sscanf(line + 2, "%d", &wp) == 1 && wp >= 0 && wp <= 2) {
-                    g_os.cfg.wallpaper_idx = wp;
-                    g_os.dirty = 1;
+                if (std::sscanf(line + 2, "%d", &wp) == 1 && wp >= 0 && wp < MAX_WALLPAPERS) {
+                    nature_os_set_wallpaper_preset(&g_os, wp);
+                    nature_os_save_state(&g_os);
                 }
             } else if (line[0] == 'A' && line[1] == ' ') {
                 int ac = 0;
-                if (std::sscanf(line + 2, "%d", &ac) == 1 && ac >= 0 && ac <= 3) {
+                if (std::sscanf(line + 2, "%d", &ac) == 1 && ac >= 0 && ac <= 5) {
                     g_os.cfg.accent_idx = ac;
                     g_os.dirty = 1;
+                    nature_os_save_state(&g_os);
+                }
+            } else if (line[0] == 'H' && line[1] == ' ') {
+                int tf = 0;
+                if (std::sscanf(line + 2, "%d", &tf) == 1 && (tf == THEME_NATURE || tf == THEME_HORIZON)) {
+                    g_os.cfg.theme_family = tf;
+                    nature_os_set_wallpaper_preset(&g_os, (tf == THEME_HORIZON) ? (g_os.cfg.dark_mode ? 4 : 3) : 0);
+                    nature_os_save_state(&g_os);
                 }
             } else if (line[0] == 'C' && line[1] == ' ') {
                 nature_terminal_exec(&g_os, line + 2);
                 g_os.dirty = 1;
+                nature_os_save_state(&g_os);
             } else if (line[0] == 'N' && line[1] == ' ') {
                 char title[64] = "System Notification";
                 char msg[128] = "";
@@ -262,7 +271,7 @@ int main(int argc, char **argv) {
                 last_tick = frame_start;
             }
 
-            if (g_os.audio_playing) {
+            if (g_os.audio_playing || (g_os.media_slideshow && g_os.media_mode == 0 && !g_os.media_grid_mode)) {
                 auto since_media = std::chrono::duration_cast<std::chrono::milliseconds>(frame_start - last_media_tick).count();
                 if (since_media >= 140) {
                     nature_media_tick(&g_os);
@@ -411,6 +420,7 @@ int main(int argc, char **argv) {
 
     nature_monitor_set_stress(&g_os, 0);
     if (reader.joinable()) reader.join();
+    nature_os_save_state(&g_os);
     g_ngfx.destroy(cr);
     g_ngfx.surface_destroy(fb);
     return 0;

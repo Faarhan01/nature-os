@@ -11,6 +11,11 @@ C_SRCS := \
 	$(NATURE_ROOT)/compositor/src/gfx_cairo.c \
 	$(NATURE_ROOT)/compositor/src/render_scheduler.c \
 	$(NATURE_ROOT)/compositor/src/main.c \
+	$(NATURE_ROOT)/shell/src/theme.c \
+	$(NATURE_ROOT)/shell/src/icons.c \
+	$(NATURE_ROOT)/shell/src/persistence.c \
+	$(NATURE_ROOT)/shell/src/wm.c \
+	$(NATURE_ROOT)/shell/src/overlays.c \
 	$(NATURE_ROOT)/shell/src/shell.c \
 	$(NATURE_ROOT)/apps/nature-files/main.c \
 	$(NATURE_ROOT)/apps/nature-terminal/main.c \
