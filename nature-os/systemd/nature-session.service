@@ -1,0 +1,20 @@
+[Unit]
+Description=Nature OS Lightweight Wayland Desktop Session
+Documentation=man:nature-compositor(1)
+After=graphical-session-pre.target dbus.socket pipewire.service
+Wants=graphical-session-pre.target pipewire-pulse.service
+BindsTo=graphical-session.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/nature-compositor --session nature-shell
+Restart=on-failure
+RestartSec=1s
+Slice=session.slice
+# Protect interactive UI responsiveness under heavy CPU/memory load
+CPUWeight=300
+IOWeight=200
+MemoryLow=192M
+
+[Install]
+WantedBy=graphical-session.target

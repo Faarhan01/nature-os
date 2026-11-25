@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="nature-os">
+  <schema id="org.natureos.desktop" path="/org/natureos/desktop/">
+    <key name="color-scheme" type="s">
+      <default>'dark'</default>
+      <summary>Desktop color theme ('dark' or 'light')</summary>
+    </key>
+    <key name="accent-color" type="s">
+      <default>'moss'</default>
+      <summary>Botanical accent preset</summary>
+    </key>
+    <key name="wallpaper-uri" type="s">
+      <default>'file:///usr/share/backgrounds/nature-os/canopy-dawn.jpg'</default>
+      <summary>Active desktop wallpaper path</summary>
+    </key>
+    <key name="dock-position" type="s">
+      <default>'bottom'</default>
+      <summary>Dock alignment ('bottom' or 'left')</summary>
+    </key>
+    <key name="dock-icon-size" type="i">
+      <default>40</default>
+      <range min="28" max="56"/>
+      <summary>Dock icon pixel size</summary>
+    </key>
+    <key name="low-power-transparency" type="b">
+      <default>false</default>
+      <summary>Disable backdrop blur to minimize GPU memory bandwidth</summary>
+    </key>
+    <key name="compositor-refresh-hz" type="i">
+      <default>60</default>
+      <summary>Target frame pacing rate for nature-compositor</summary>
+    </key>
+    <key name="pinned-apps" type="as">
+      <default>['org.natureos.Files.desktop', 'org.natureos.Browser.desktop', 'org.natureos.Terminal.desktop', 'org.natureos.Store.desktop', 'org.natureos.Monitor.desktop', 'org.natureos.Media.desktop', 'org.natureos.Settings.desktop']</default>
+      <summary>Desktop entries pinned to the dock</summary>
+    </key>
+  </schema>
+</schemalist>

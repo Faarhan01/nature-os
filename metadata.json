@@ -1,0 +1,8 @@
+{
+  "name": "Nature OS",
+  "description": "A lightweight, Ubuntu-based Linux desktop operating system engineered for low RAM/CPU overhead, fluid multitasking, and botanical precision.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

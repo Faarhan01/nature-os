@@ -1,0 +1,30 @@
+Source: nature-os-desktop
+Section: metapackages
+Priority: optional
+Maintainer: Nature OS Engineering <release@natureos.org>
+Build-Depends: debhelper-compat (= 13), meson (>= 1.2.0), libwlroots-dev, libgtk-4-dev, valac, libapt-pkg-dev, libvte-2.91-gtk4-dev, libwebkitgtk-6.0-dev
+Standards-Version: 4.6.2
+
+Package: nature-os-desktop
+Architecture: amd64 arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ ubuntu-minimal,
+ systemd,
+ pipewire,
+ pipewire-pulse,
+ wireplumber,
+ network-manager,
+ xdg-desktop-portal-wlr,
+ libapt-pkg6.0,
+ libgtk-4-1,
+ zram-tools,
+ fonts-plus-jakarta-sans | fonts-noto-core
+Recommends:
+ nature-browser,
+ vlc,
+ mesa-vulkan-drivers
+Description: Nature OS lightweight desktop environment for Ubuntu 24.04 LTS
+ Installs the C wlroots Wayland compositor, GTK4/Vala botanical shell,
+ low-RAM zram tuning, and native C/C++ Ubuntu system utilities.
