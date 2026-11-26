@@ -18,6 +18,10 @@ function detectLanguage(filename: string): string {
     case '.c':
     case '.h':
       return 'c';
+    case '.cpp':
+    case '.hpp':
+    case '.cc':
+      return 'cpp';
     case '.vala':
       return 'vala';
     case '.py':

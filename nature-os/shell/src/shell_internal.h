@@ -23,12 +23,26 @@ void ensure_cached_wallpaper(NatureOSState *st, int w, int h);
 void draw_app_icon(cairo_t *cr, AppType app, double x, double y, double size);
 void draw_folder_glyph(cairo_t *cr, double x, double y, double w, double h, double r, double g, double b, double a);
 void draw_file_glyph_simple(cairo_t *cr, double x, double y, double w, double h, double r, double g, double b, double a);
+void draw_wifi_glyph(cairo_t *cr, double cx, double cy, double r, double g, double b, double a);
+void draw_speaker_glyph(cairo_t *cr, double cx, double cy, int muted, double r, double g, double b, double a);
+void draw_sun_glyph(cairo_t *cr, double cx, double cy, double r, double g, double b, double a);
 
 /* Window Manager & Input Dispatch */
+typedef struct {
+    int kind;     /* 0=App, 1=File, 2=Setting, 3=Action */
+    int arg0;     /* app_idx / vfs_idx / setting_sec / action_id */
+    char title[48];
+    char subtitle[64];
+    char tag[12];
+} SpotlightItem;
+
 void clamp_window_to_screen(NatureOSState *st, OSWindow *w);
 void render_window(NatureOSState *st, cairo_t *cr, OSWindow *w, const NaturePalette *pal);
+int wm_collect_alt_tab_wins(const NatureOSState *st, int *out_indices);
 void wm_cycle_alt_tab(NatureOSState *st, int step);
 void wm_commit_alt_tab(NatureOSState *st);
+int wm_collect_spotlight(const NatureOSState *st, SpotlightItem *out, int max_items);
+void wm_activate_spotlight(NatureOSState *st, const SpotlightItem *item);
 
 /* Shell Overlays, Popovers & Dialogs */
 void render_quick_settings_popover(NatureOSState *st, cairo_t *cr, const NaturePalette *pal);

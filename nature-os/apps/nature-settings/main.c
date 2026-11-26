@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define NUM_SECTIONS 7
+#define NUM_SECTIONS 8
 static const char *SECTIONS[NUM_SECTIONS] = {
     "Appearance",
     "Display",
@@ -11,16 +11,18 @@ static const char *SECTIONS[NUM_SECTIONS] = {
     "Performance",
     "Network & Device",
     "Shortcuts",
+    "Services & Shell",
     "About System"
 };
 
 static const char *SECTION_KEYWORDS[NUM_SECTIONS] = {
-    "appearance theme nature horizon dark light wallpaper accent dock clock toast widget snap notification",
+    "appearance theme nature horizon dark light wallpaper accent dock size animations motion panel stats telemetry clock toast widget snap notification",
     "display monitor screen hz refresh brightness night light warmth filter blue eye",
     "sound audio volume mute pipewire output sink bluetooth speaker",
-    "performance power saver balanced compositor zram lz4 memory cpu",
+    "performance power saver balanced compositor zram lz4 memory cpu telemetry cadence refresh ms",
     "network wifi bluetooth device hostname pc name computer rename",
-    "shortcuts keyboard hotkeys super esc snap tile overview lock arrow space",
+    "shortcuts keyboard hotkeys super esc snap tile overview lock auto lock idle timeout arrow space",
+    "services shell systemd daemon pipewire networkmanager oomd terminal font size compact chrome window titlebar dock labels",
     "about system storage disk statvfs kernel cpu ram reset defaults lock update version"
 };
 
@@ -95,6 +97,15 @@ static void draw_settings_icon(cairo_t *cr, int idx, double x, double y, double 
             ngfx_fill_rect(cr, x + 6.9, y + 6.0, 2.2, 2.0, 0.5, r, g, b, a);
             ngfx_fill_rect(cr, x + 10.3, y + 6.0, 2.2, 2.0, 0.5, r, g, b, a);
             ngfx_fill_rect(cr, x + 4.5, y + 9.2, 7.0, 1.8, 0.5, r, g, b, a);
+            break;
+        case 6: /* Services & Shell */
+            g_ngfx.move_to(cr, x + 2.5, y + 5.0); g_ngfx.line_to(cr, x + 13.5, y + 5.0);
+            g_ngfx.move_to(cr, x + 2.5, y + 8.5); g_ngfx.line_to(cr, x + 13.5, y + 8.5);
+            g_ngfx.move_to(cr, x + 2.5, y + 12.0); g_ngfx.line_to(cr, x + 13.5, y + 12.0);
+            g_ngfx.stroke(cr);
+            ngfx_fill_circle(cr, x + 6.0, y + 5.0, 1.7, r, g, b, a);
+            ngfx_fill_circle(cr, x + 10.5, y + 8.5, 1.7, r, g, b, a);
+            ngfx_fill_circle(cr, x + 6.5, y + 12.0, 1.7, r, g, b, a);
             break;
         default: /* About */
             ngfx_stroke_rect(cr, x + 2.5, y + 2.5, 11, 11, 5.5, 1.35, r, g, b, a);
@@ -254,6 +265,9 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
                            act ? (dark ? pal.ab_hi : ab) : mut_b, 0.95);
         ngfx_text_clipped(cr, "Noto Sans", act, 11.2, cx + 35, sy + 18, side_w - 42,
                           fg_r, fg_g, fg_b, act ? 1.0 : (matched ? 0.98 : 0.84), SECTIONS[i]);
+        if (matched && !act) {
+            ngfx_fill_circle(cr, cx + side_w - 16, sy + 14, 2.8, pal.ar_hi, pal.ag_hi, pal.ab_hi, 0.95);
+        }
         nature_add_hit(st, cx + 8, sy, side_w - 16, 28, HIT_SETTINGS_SECTION, i, 0);
     }
 
@@ -285,7 +299,7 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
     int pw = pane_w - 42;
     if (pw < 180) pw = 180;
 
-    int content_heights[NUM_SECTIONS] = {775, 425, 345, 390, 395, 365, 565};
+    int content_heights[NUM_SECTIONS] = {980, 425, 345, 465, 395, 445, 520, 565};
     int sec = st->settings_section;
     if (sec < 0 || sec >= NUM_SECTIONS) sec = 0;
     int total_h = content_heights[sec];
@@ -470,13 +484,38 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
                           1.0, st->cfg.show_seconds ? ":SS" : "HM");
         nature_add_hit(st, bx_sec, btn_y_dc, sec_bw, 28, HIT_SETTINGS_CLOCK_SEC, 0, 0);
 
-        struct { const char *title; const char *desc; int val; int hit; } toggles[3] = {
+        py += (stack_dc ? 92 : 60);
+        ngfx_fill_rect(cr, px, py, pw, 56, 11, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 55, 11, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_text_clipped(cr, "Noto Sans", 1, 12.0, px + 14, py + 23, pw - 246, fg_r, fg_g, fg_b, 1.0, "Dock Icon Scale");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 10.0, px + 14, py + 40, pw - 246, mut_r, mut_g, mut_b, 0.92, "Adjust launcher & dock icon footprint");
+        {
+            static const char *DS_LBLS[3] = {"Compact", "Standard", "Large"};
+            int dsw = 70;
+            int ds_start = px + pw - (dsw * 3 + 12 + 12);
+            if (ds_start < px + 130) ds_start = px + 130;
+            for (int ds = 0; ds < 3; ++ds) {
+                int bx = ds_start + ds * (dsw + 6);
+                if (bx + dsw > px + pw - 8) break;
+                int act = (st->cfg.dock_size == ds);
+                ngfx_fill_rect(cr, bx, py + 14, dsw, 28, 7,
+                               act ? ar : pal.elev_r, act ? ag : pal.elev_g, act ? ab : pal.elev_b, 0.94);
+                if (!act) ngfx_stroke_rect(cr, bx + 0.5, py + 14.5, dsw - 1, 27, 7, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+                ngfx_text_clipped(cr, "Noto Sans", 1, 10.0, bx + 8, py + 32, dsw - 12,
+                                  act ? pal.on_acc_r : fg_r, act ? pal.on_acc_g : fg_g, act ? pal.on_acc_b : fg_b, 1.0, DS_LBLS[ds]);
+                nature_add_hit(st, bx, py + 14, dsw, 28, HIT_SETTINGS_DOCK_SIZE, ds, 0);
+            }
+        }
+        py += 62;
+
+        struct { const char *title; const char *desc; int val; int hit; } toggles[5] = {
+            {"Smooth UI Animations", "Enable compositor transitions and motion effects", st->cfg.animations_enabled, HIT_SETTINGS_ANIMATIONS},
+            {"Top Bar Live Telemetry Pill", "Display live CPU & RAM summary inside top bar", st->cfg.show_panel_stats, HIT_SETTINGS_PANEL_STATS},
             {"Edge Window Snapping", "Snap windows to left/right halves or maximize on drag", st->cfg.window_snap, HIT_SETTINGS_WINDOW_SNAP},
             {"Desktop Ambient Widgets & Shortcuts", "Show backdrop clock and quick launch cards on desktop", st->cfg.show_desktop_widgets, HIT_SETTINGS_DESKTOP_WIDGETS},
             {"Desktop Toast Notification Popups", "Display top-right popup banners (history stays in tray)", st->cfg.show_toast_popups, HIT_SETTINGS_TOAST_POPUPS},
         };
-        py += (stack_dc ? 92 : 60);
-        for (int t = 0; t < 3; ++t) {
+        for (int t = 0; t < 5; ++t) {
             ngfx_fill_rect(cr, px, py, pw, 54, 11, pal.card_r, pal.card_g, pal.card_b, 0.96);
             ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 53, 11, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
             ngfx_text_clipped(cr, "Noto Sans", 1, 12.0, px + 14, py + 23, pw - 86, fg_r, fg_g, fg_b, 1.0, toggles[t].title);
@@ -536,9 +575,14 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
             int bx = px + 14 + k * (bp_w + 8);
             int by_c = py + 66;
             int sel = (st->cfg.brightness >= br_presets[k] - 8 && st->cfg.brightness <= br_presets[k] + 8);
+            int bhov = (st->hover_mx >= bx && st->hover_mx <= bx + bp_w && st->hover_my >= by_c && st->hover_my <= by_c + 25);
             ngfx_fill_rect(cr, bx, by_c, bp_w, 25, 7,
-                           sel ? pal.warning_r : pal.elev_r, sel ? pal.warning_g : pal.elev_g, sel ? pal.warning_b : pal.elev_b, 0.92);
-            if (!sel) ngfx_stroke_rect(cr, bx + 0.5, by_c + 0.5, bp_w - 1, 24, 7, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+                           sel ? pal.warning_r : (bhov ? pal.hover_r : pal.elev_r),
+                           sel ? pal.warning_g : (bhov ? pal.hover_g : pal.elev_g),
+                           sel ? pal.warning_b : (bhov ? pal.hover_b : pal.elev_b), 0.94);
+            if (!sel) ngfx_stroke_rect(cr, bx + 0.5, by_c + 0.5, bp_w - 1, 24, 7, 1.0,
+                                       bhov ? pal.warning_r : pal.border_r, bhov ? pal.warning_g : pal.border_g, bhov ? pal.warning_b : pal.border_b,
+                                       bhov ? 0.55 : pal.border_a);
             ngfx_text_clipped(cr, "Noto Sans", sel, 10.2, bx + 10, by_c + 16.5, bp_w - 16,
                               sel ? 1.0 : fg_r, sel ? 1.0 : fg_g, sel ? 1.0 : fg_b, 1.0, br_plbls[k]);
             nature_add_hit(st, bx, by_c, bp_w, 25, HIT_SETTINGS_BRIGHTNESS, br_presets[k], 0);
@@ -559,11 +603,14 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
             int wx = px + 14 + k * (chip_w + 8);
             int wy_c = py + 58;
             int sel = (st->cfg.night_light_warmth >= w_vals[k] - 15 && st->cfg.night_light_warmth <= w_vals[k] + 15);
+            int whov = (st->hover_mx >= wx && st->hover_mx <= wx + chip_w && st->hover_my >= wy_c && st->hover_my <= wy_c + 26);
             ngfx_fill_rect(cr, wx, wy_c, chip_w, 26, 7,
-                           sel ? pal.warning_r : pal.elev_r,
-                           sel ? pal.warning_g : pal.elev_g,
-                           sel ? pal.warning_b : pal.elev_b, sel ? 0.92 : 0.92);
-            if (!sel) ngfx_stroke_rect(cr, wx + 0.5, wy_c + 0.5, chip_w - 1, 25, 7, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+                           sel ? pal.warning_r : (whov ? pal.hover_r : pal.elev_r),
+                           sel ? pal.warning_g : (whov ? pal.hover_g : pal.elev_g),
+                           sel ? pal.warning_b : (whov ? pal.hover_b : pal.elev_b), 0.94);
+            if (!sel) ngfx_stroke_rect(cr, wx + 0.5, wy_c + 0.5, chip_w - 1, 25, 7, 1.0,
+                                       whov ? pal.warning_r : pal.border_r, whov ? pal.warning_g : pal.border_g, whov ? pal.warning_b : pal.border_b,
+                                       whov ? 0.55 : pal.border_a);
             ngfx_text_clipped(cr, "Noto Sans", sel, 10.4, wx + 10, wy_c + 17, chip_w - 16,
                               sel ? 1.0 : fg_r, sel ? 1.0 : fg_g, sel ? 1.0 : fg_b, 1.0, w_lbls[k]);
             nature_add_hit(st, wx, wy_c, chip_w, 26, HIT_SETTINGS_NL_WARMTH, w_vals[k], 0);
@@ -597,25 +644,29 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
 
         int v_down = st->cfg.volume - 10; if (v_down < 0) v_down = 0;
         int v_up = st->cfg.volume + 10; if (v_up > 100) v_up = 100;
-        ngfx_fill_rect(cr, minus_x, sb_y, step_w, 24, 6, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
-        ngfx_stroke_rect(cr, minus_x + 0.5, sb_y + 0.5, step_w - 1, 23, 6, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        int m_hov = (st->hover_mx >= minus_x && st->hover_mx <= minus_x + step_w && st->hover_my >= sb_y && st->hover_my <= sb_y + 24);
+        ngfx_fill_rect(cr, minus_x, sb_y, step_w, 24, 6, m_hov ? pal.hover_r : pal.elev_r, m_hov ? pal.hover_g : pal.elev_g, m_hov ? pal.hover_b : pal.elev_b, 0.95);
+        ngfx_stroke_rect(cr, minus_x + 0.5, sb_y + 0.5, step_w - 1, 23, 6, 0.9, m_hov ? ar : pal.border_r, m_hov ? ag : pal.border_g, m_hov ? ab : pal.border_b, m_hov ? 0.55 : pal.border_a);
         ngfx_text(cr, "JetBrains Mono", 1, 9.8, minus_x + 8, sb_y + 15.5, fg_r, fg_g, fg_b, 1.0, "-10%");
         nature_add_hit(st, minus_x, sb_y, step_w, 24, HIT_SETTINGS_VOLUME, v_down, 0);
 
-        ngfx_fill_rect(cr, plus_x, sb_y, step_w, 24, 6, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
-        ngfx_stroke_rect(cr, plus_x + 0.5, sb_y + 0.5, step_w - 1, 23, 6, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        int p_hov = (st->hover_mx >= plus_x && st->hover_mx <= plus_x + step_w && st->hover_my >= sb_y && st->hover_my <= sb_y + 24);
+        ngfx_fill_rect(cr, plus_x, sb_y, step_w, 24, 6, p_hov ? pal.hover_r : pal.elev_r, p_hov ? pal.hover_g : pal.elev_g, p_hov ? pal.hover_b : pal.elev_b, 0.95);
+        ngfx_stroke_rect(cr, plus_x + 0.5, sb_y + 0.5, step_w - 1, 23, 6, 0.9, p_hov ? ar : pal.border_r, p_hov ? ag : pal.border_g, p_hov ? ab : pal.border_b, p_hov ? 0.55 : pal.border_a);
         ngfx_text(cr, "JetBrains Mono", 1, 9.8, plus_x + 8, sb_y + 15.5, fg_r, fg_g, fg_b, 1.0, "+10%");
         nature_add_hit(st, plus_x, sb_y, step_w, 24, HIT_SETTINGS_VOLUME, v_up, 0);
 
-        ngfx_fill_rect(cr, test_x, sb_y, test_w, 24, 6, ar, ag, ab, 0.90);
+        int ts_hov = (st->hover_mx >= test_x && st->hover_mx <= test_x + test_w && st->hover_my >= sb_y && st->hover_my <= sb_y + 24);
+        ngfx_fill_rect(cr, test_x, sb_y, test_w, 24, 6, ar * (ts_hov ? 1.12 : 1.0), ag * (ts_hov ? 1.12 : 1.0), ab * (ts_hov ? 1.12 : 1.0), 0.92);
         ngfx_text(cr, "Noto Sans", 1, 10.0, test_x + 11, sb_y + 15.5, pal.on_acc_r, pal.on_acc_g, pal.on_acc_b, 1.0, "Test Sound");
         nature_add_hit(st, test_x, sb_y, test_w, 24, HIT_SETTINGS_SOUND_TEST, 0, 0);
 
+        int mu_hov = (st->hover_mx >= mute_x && st->hover_mx <= mute_x + mute_w && st->hover_my >= sb_y && st->hover_my <= sb_y + 24);
         ngfx_fill_rect(cr, mute_x, sb_y, mute_w, 24, 6,
-                       st->cfg.audio_muted ? pal.danger_r : pal.elev_r,
-                       st->cfg.audio_muted ? pal.danger_g : pal.elev_g,
-                       st->cfg.audio_muted ? pal.danger_b : pal.elev_b, 0.95);
-        if (!st->cfg.audio_muted) ngfx_stroke_rect(cr, mute_x + 0.5, sb_y + 0.5, mute_w - 1, 23, 6, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+                       st->cfg.audio_muted ? pal.danger_r : (mu_hov ? pal.hover_r : pal.elev_r),
+                       st->cfg.audio_muted ? pal.danger_g : (mu_hov ? pal.hover_g : pal.elev_g),
+                       st->cfg.audio_muted ? pal.danger_b : (mu_hov ? pal.hover_b : pal.elev_b), 0.95);
+        if (!st->cfg.audio_muted) ngfx_stroke_rect(cr, mute_x + 0.5, sb_y + 0.5, mute_w - 1, 23, 6, 0.9, mu_hov ? ar : pal.border_r, mu_hov ? ag : pal.border_g, mu_hov ? ab : pal.border_b, mu_hov ? 0.55 : pal.border_a);
         ngfx_text(cr, "Noto Sans", 1, 10.2, mute_x + (st->cfg.audio_muted ? 11 : 17), sb_y + 15.5,
                   st->cfg.audio_muted ? 1.0 : fg_r, st->cfg.audio_muted ? 1.0 : fg_g, st->cfg.audio_muted ? 1.0 : fg_b,
                   1.0, st->cfg.audio_muted ? "Unmute" : "Mute");
@@ -685,7 +736,30 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
             py += 72;
         }
 
-        py += 4;
+        ngfx_fill_rect(cr, px, py, pw, 58, 11, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 57, 11, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_text_clipped(cr, "Noto Sans", 1, 12.4, px + 14, py + 23, pw - 246, fg_r, fg_g, fg_b, 1.0, "/proc Telemetry Cadence");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 10.2, px + 14, py + 41, pw - 246, mut_r, mut_g, mut_b, 0.95, "System Monitor & top bar sampling interval");
+        {
+            static const int TELEM_VALS[3] = {250, 500, 1000};
+            static const char *TELEM_LBLS[3] = {"250ms", "500ms", "1.0s"};
+            int tw_b = 64;
+            int tx_start = px + pw - (tw_b * 3 + 12 + 12);
+            if (tx_start < px + 150) tx_start = px + 150;
+            for (int k = 0; k < 3; ++k) {
+                int bx = tx_start + k * (tw_b + 6);
+                if (bx + tw_b > px + pw - 8) break;
+                int act = (st->cfg.telemetry_ms == TELEM_VALS[k]);
+                ngfx_fill_rect(cr, bx, py + 15, tw_b, 28, 7,
+                               act ? ar : pal.elev_r, act ? ag : pal.elev_g, act ? ab : pal.elev_b, 0.94);
+                if (!act) ngfx_stroke_rect(cr, bx + 0.5, py + 15.5, tw_b - 1, 27, 7, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+                ngfx_text_clipped(cr, "JetBrains Mono", 1, 10.0, bx + 10, py + 33, tw_b - 12,
+                                  act ? pal.on_acc_r : fg_r, act ? pal.on_acc_g : fg_g, act ? pal.on_acc_b : fg_b, 1.0, TELEM_LBLS[k]);
+                nature_add_hit(st, bx, py + 15, tw_b, 28, HIT_SETTINGS_TELEMETRY_MS, TELEM_VALS[k], 0);
+            }
+        }
+        py += 68;
+
         ngfx_text(cr, "Noto Sans", 1, 11.4, px, py, mut_r, mut_g, mut_b, 1.0, "Live Resource Snapshot");
         py += 10;
         int tw_card = (pw - 16) / 3;
@@ -805,18 +879,130 @@ void nature_settings_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx,
             {"Esc", "Close active overlay, menu, or text viewer"},
             {"Right-Click Desktop", "Open desktop quick-action context menu"},
             {"Double-Click Titlebar", "Maximize or restore active window"},
-            {"ArrowLeft / ArrowRight", "Step Media Viewer photos or seek +/-5s audio"},
-            {"Space / G / R / + / -", "Play/pause audio, toggle Media Grid, rotate, zoom"},
+            {"ArrowLeft / ArrowRight", "Step Media photos or seek +/-5s video & audio"},
+            {"Space / G / R / L / F", "Play/pause video & audio, Grid, Rotate, Loop, Fit"},
         };
         for (int i = 0; i < 6; ++i) {
             ngfx_fill_rect(cr, px, py, pw, 40, 9, pal.card_r, pal.card_g, pal.card_b, 0.96);
             ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 39, 9, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
-            int k_w = compact ? 132 : 168;
+            int k_w = compact ? 136 : 172;
             ngfx_fill_rect(cr, px + 10, py + 8, k_w, 24, 6, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
+            ngfx_stroke_rect(cr, px + 10.5, py + 8.5, k_w - 1, 23, 6, 0.8, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
             ngfx_text_clipped(cr, "JetBrains Mono", 1, 9.8, px + 18, py + 23.5, k_w - 14,
                               dark ? pal.ar_hi : ar, dark ? pal.ag_hi : ag, dark ? pal.ab_hi : ab, 1.0, sc_rows[i][0]);
             ngfx_text_clipped(cr, "Noto Sans", 0, 10.6, px + 18 + k_w, py + 24, pw - k_w - 28, fg_r, fg_g, fg_b, 0.92, sc_rows[i][1]);
             py += 46;
+        }
+
+        py += 4;
+        ngfx_fill_rect(cr, px, py, pw, 58, 11, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 57, 11, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_text_clipped(cr, "Noto Sans", 1, 12.2, px + 14, py + 23, pw - 236, fg_r, fg_g, fg_b, 1.0, "Auto-Lock Idle Timeout");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 10.0, px + 14, py + 41, pw - 236, mut_r, mut_g, mut_b, 0.92, "Lock desktop automatically after inactivity");
+        {
+            static const int AL_VALS[3] = {0, 5, 15};
+            static const char *AL_LBLS[3] = {"Never", "5 min", "15 min"};
+            int al_w = 62;
+            int al_start = px + pw - (al_w * 3 + 12 + 12);
+            if (al_start < px + 140) al_start = px + 140;
+            for (int k = 0; k < 3; ++k) {
+                int bx = al_start + k * (al_w + 6);
+                if (bx + al_w > px + pw - 8) break;
+                int act = (st->cfg.auto_lock_min == AL_VALS[k]);
+                ngfx_fill_rect(cr, bx, py + 15, al_w, 28, 7,
+                               act ? ar : pal.elev_r, act ? ag : pal.elev_g, act ? ab : pal.elev_b, 0.94);
+                if (!act) ngfx_stroke_rect(cr, bx + 0.5, py + 15.5, al_w - 1, 27, 7, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+                ngfx_text_clipped(cr, "Noto Sans", 1, 10.0, bx + 10, py + 33, al_w - 14,
+                                  act ? pal.on_acc_r : fg_r, act ? pal.on_acc_g : fg_g, act ? pal.on_acc_b : fg_b, 1.0, AL_LBLS[k]);
+                nature_add_hit(st, bx, py + 15, al_w, 28, HIT_SETTINGS_AUTO_LOCK, AL_VALS[k], 0);
+            }
+        }
+    } else if (sec == 6) {
+        /* Services & Shell Preferences */
+        py += 18;
+        ngfx_text(cr, "Noto Sans", 1, 12.0, px, py, mut_r, mut_g, mut_b, 1.0, "Systemd Daemons & Session Units");
+        py += 10;
+
+        struct { const char *unit; const char *desc; int active; int arg; } svcs[3] = {
+            {"pipewire.service", "Low-latency audio & video graph server", st->svc_pipewire, 0},
+            {"NetworkManager.service", "Wi-Fi radio, DNS & interface manager", st->svc_network, 1},
+            {"systemd-oomd.service", "Userspace cgroup v2 OOM pressure guard", st->svc_oomd, 2}
+        };
+        for (int i = 0; i < 3; ++i) {
+            ngfx_fill_rect(cr, px, py, pw, 54, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+            ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 53, 10, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+            ngfx_fill_circle(cr, px + 16, py + 21, 3.6,
+                             svcs[i].active ? pal.success_r : pal.danger_r,
+                             svcs[i].active ? pal.success_g : pal.danger_g,
+                             svcs[i].active ? pal.success_b : pal.danger_b, 0.98);
+            ngfx_text_clipped(cr, "JetBrains Mono", 1, 11.4, px + 28, py + 24, pw - 170, fg_r, fg_g, fg_b, 1.0, svcs[i].unit);
+            ngfx_text_clipped(cr, "Noto Sans", 0, 9.8, px + 28, py + 41, pw - 106, mut_r, mut_g, mut_b, 0.92, svcs[i].desc);
+            if (pw >= 360) {
+                const char *st_lbl = svcs[i].active ? "active" : "stopped";
+                ngfx_text(cr, "JetBrains Mono", 1, 9.4, px + pw - 122, py + 31,
+                          svcs[i].active ? pal.success_r : pal.danger_r,
+                          svcs[i].active ? pal.success_g : pal.danger_g,
+                          svcs[i].active ? pal.success_b : pal.danger_b, 0.95, st_lbl);
+            }
+            ngfx_toggle_switch(cr, px + pw - 62, py + 15, 46, 24, svcs[i].active, ar, ag, ab, dark);
+            nature_add_hit(st, px + pw - 68, py + 11, 58, 32, HIT_SETTINGS_SVC_TOGGLE, svcs[i].arg, 0);
+            py += 60;
+        }
+
+        /* Read-only compositor unit status row */
+        ngfx_fill_rect(cr, px, py, pw, 48, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 47, 10, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_fill_circle(cr, px + 16, py + 24, 3.6, pal.success_r, pal.success_g, pal.success_b, 1.0);
+        ngfx_text_clipped(cr, "JetBrains Mono", 1, 11.2, px + 28, py + 22, pw - 140, fg_r, fg_g, fg_b, 1.0, "nature-compositor.service");
+        char comp_stat[96];
+        snprintf(comp_stat, sizeof(comp_stat), "active (running) · %.0f FPS · %.1f ms · RSS %d MiB",
+                 st->measured_fps, st->frame_ms, st->os_rss_mb);
+        ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.5, px + 28, py + 38, pw - 44, mut_r, mut_g, mut_b, 0.92, comp_stat);
+        py += 62;
+
+        ngfx_text(cr, "Noto Sans", 1, 12.0, px, py, mut_r, mut_g, mut_b, 1.0, "Terminal & Window Shell");
+        py += 10;
+
+        /* Terminal Font Size Selector */
+        ngfx_fill_rect(cr, px, py, pw, 58, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 57, 10, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_text_clipped(cr, "Noto Sans", 1, 12.0, px + 14, py + 23, pw - 236, fg_r, fg_g, fg_b, 1.0, "Terminal Font Size");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 10.0, px + 14, py + 41, pw - 236, mut_r, mut_g, mut_b, 0.92, "Monospace glyph scale inside Terminal");
+        {
+            static const int F_SZ[5] = {10, 11, 12, 13, 14};
+            int fw_b = 38;
+            int f_start = px + pw - (fw_b * 5 + 20 + 10);
+            if (f_start < px + 140) f_start = px + 140;
+            for (int k = 0; k < 5; ++k) {
+                int bx = f_start + k * (fw_b + 5);
+                if (bx + fw_b > px + pw - 8) break;
+                int cur_sz = (st->cfg.term_font_size >= 10 && st->cfg.term_font_size <= 14) ? st->cfg.term_font_size : 12;
+                int act = (cur_sz == F_SZ[k]);
+                ngfx_fill_rect(cr, bx, py + 15, fw_b, 28, 7,
+                               act ? ar : pal.elev_r, act ? ag : pal.elev_g, act ? ab : pal.elev_b, 0.94);
+                if (!act) ngfx_stroke_rect(cr, bx + 0.5, py + 15.5, fw_b - 1, 27, 7, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+                char fl[10];
+                snprintf(fl, sizeof(fl), "%dpx", F_SZ[k]);
+                ngfx_text(cr, "JetBrains Mono", 1, 9.6, bx + 6, py + 33,
+                          act ? pal.on_acc_r : fg_r, act ? pal.on_acc_g : fg_g, act ? pal.on_acc_b : fg_b, 1.0, fl);
+                nature_add_hit(st, bx, py + 15, fw_b, 28, HIT_SETTINGS_TERM_FONT, F_SZ[k], 0);
+            }
+        }
+        py += 64;
+
+        /* Compact Window Chrome & Dock Labels */
+        struct { const char *title; const char *desc; int val; int hit; } shell_toggles[2] = {
+            {"Compact Window Titlebars", "Slim 32px window headers to maximize vertical space", st->cfg.compact_chrome, HIT_SETTINGS_COMPACT_CHROME},
+            {"Dock App Labels & Tooltips", "Display floating name badges when hovering dock icons", st->cfg.show_dock_labels, HIT_SETTINGS_DOCK_LABELS}
+        };
+        for (int t = 0; t < 2; ++t) {
+            ngfx_fill_rect(cr, px, py, pw, 54, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+            ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, 53, 10, 1.0, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+            ngfx_text_clipped(cr, "Noto Sans", 1, 12.0, px + 14, py + 23, pw - 86, fg_r, fg_g, fg_b, 1.0, shell_toggles[t].title);
+            ngfx_text_clipped(cr, "Noto Sans", 0, 10.0, px + 14, py + 40, pw - 86, mut_r, mut_g, mut_b, 0.92, shell_toggles[t].desc);
+            ngfx_toggle_switch(cr, px + pw - 62, py + 15, 46, 24, shell_toggles[t].val, ar, ag, ab, dark);
+            nature_add_hit(st, px + pw - 68, py + 11, 58, 32, shell_toggles[t].hit, 0, 0);
+            py += 60;
         }
     } else {
         /* About System + Storage Bar + Reset Defaults */
@@ -986,6 +1172,18 @@ void nature_settings_click(NatureOSState *st, const HitRect *hit) {
             st->cfg.dock_position = !st->cfg.dock_position;
             save_needed = 1;
             break;
+        case HIT_SETTINGS_DOCK_SIZE:
+            st->cfg.dock_size = (hit->arg0 >= 0 && hit->arg0 <= 2) ? hit->arg0 : 1;
+            save_needed = 1;
+            break;
+        case HIT_SETTINGS_ANIMATIONS:
+            st->cfg.animations_enabled = !st->cfg.animations_enabled;
+            save_needed = 1;
+            break;
+        case HIT_SETTINGS_PANEL_STATS:
+            st->cfg.show_panel_stats = !st->cfg.show_panel_stats;
+            save_needed = 1;
+            break;
         case HIT_SETTINGS_CLOCK_24H:
             st->cfg.clock_24h = !st->cfg.clock_24h;
             save_needed = 1;
@@ -1081,6 +1279,41 @@ void nature_settings_click(NatureOSState *st, const HitRect *hit) {
             st->cfg.power_profile = hit->arg0 % 3;
             save_needed = 1;
             break;
+        case HIT_SETTINGS_TELEMETRY_MS:
+            st->cfg.telemetry_ms = (hit->arg0 == 250 || hit->arg0 == 1000) ? hit->arg0 : 500;
+            save_needed = 1;
+            break;
+        case HIT_SETTINGS_AUTO_LOCK:
+            st->cfg.auto_lock_min = (hit->arg0 == 5 || hit->arg0 == 15) ? hit->arg0 : 0;
+            save_needed = 1;
+            break;
+        case HIT_SETTINGS_TERM_FONT:
+            st->cfg.term_font_size = (hit->arg0 >= 10 && hit->arg0 <= 14) ? hit->arg0 : 12;
+            save_needed = 1;
+            break;
+        case HIT_SETTINGS_COMPACT_CHROME:
+            st->cfg.compact_chrome = !st->cfg.compact_chrome;
+            save_needed = 1;
+            break;
+        case HIT_SETTINGS_DOCK_LABELS:
+            st->cfg.show_dock_labels = !st->cfg.show_dock_labels;
+            save_needed = 1;
+            break;
+        case HIT_SETTINGS_SVC_TOGGLE:
+            if (hit->arg0 == 0) {
+                st->svc_pipewire = !st->svc_pipewire;
+                nature_notify(st, "systemd", st->svc_pipewire ? "Started pipewire.service" : "Stopped pipewire.service");
+            } else if (hit->arg0 == 1) {
+                st->svc_network = !st->svc_network;
+                st->cfg.wifi_enabled = st->svc_network;
+                if (!st->svc_network) st->settings_net_ping_ms = -1;
+                nature_notify(st, "systemd", st->svc_network ? "Started NetworkManager.service" : "Stopped NetworkManager.service");
+            } else if (hit->arg0 == 2) {
+                st->svc_oomd = !st->svc_oomd;
+                nature_notify(st, "systemd", st->svc_oomd ? "Started systemd-oomd.service" : "Stopped systemd-oomd.service");
+            }
+            save_needed = 1;
+            break;
         case HIT_SETTINGS_CHECK_UPDATE:
             st->settings_update_checked = 1;
             nature_notify(st, "Ubuntu APT", "All 1,412 system packages are up to date (noble-security).");
@@ -1116,6 +1349,7 @@ void nature_settings_click(NatureOSState *st, const HitRect *hit) {
 
 void nature_settings_key(NatureOSState *st, const char *key) {
     if (!key || !*key) return;
+    if (strcmp(key, "Space") == 0) key = " ";
     if (st->active_text_target == 5) {
         if (strcmp(key, "Backspace") == 0) {
             size_t len = strlen(st->settings_hostname_draft);

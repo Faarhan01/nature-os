@@ -95,6 +95,11 @@ void nature_os_save_state(const NatureOSState *st_in) {
     fprintf(f, "custom_wp_media_idx=%d\n", st->custom_wp_media_idx);
     fprintf(f, "accent_idx=%d\n", st->cfg.accent_idx);
     fprintf(f, "dock_position=%d\n", st->cfg.dock_position);
+    fprintf(f, "dock_size=%d\n", st->cfg.dock_size);
+    fprintf(f, "animations_enabled=%d\n", st->cfg.animations_enabled);
+    fprintf(f, "show_panel_stats=%d\n", st->cfg.show_panel_stats);
+    fprintf(f, "telemetry_ms=%d\n", st->cfg.telemetry_ms);
+    fprintf(f, "auto_lock_min=%d\n", st->cfg.auto_lock_min);
     fprintf(f, "low_power_mode=%d\n", st->cfg.low_power_mode);
     fprintf(f, "zram_enabled=%d\n", st->cfg.zram_enabled);
     fprintf(f, "wifi_enabled=%d\n", st->cfg.wifi_enabled);
@@ -112,18 +117,31 @@ void nature_os_save_state(const NatureOSState *st_in) {
     fprintf(f, "window_snap=%d\n", st->cfg.window_snap);
     fprintf(f, "show_desktop_widgets=%d\n", st->cfg.show_desktop_widgets);
     fprintf(f, "show_toast_popups=%d\n", st->cfg.show_toast_popups);
+    fprintf(f, "term_font_size=%d\n", st->cfg.term_font_size);
+    fprintf(f, "compact_chrome=%d\n", st->cfg.compact_chrome);
+    fprintf(f, "show_dock_labels=%d\n", st->cfg.show_dock_labels);
     write_escaped_line(f, "device_name", st->cfg.device_name);
 
     fprintf(f, "active_workspace=%d\n", st->active_workspace);
     fprintf(f, "settings_section=%d\n", st->settings_section);
     fprintf(f, "settings_update_checked=%d\n", st->settings_update_checked);
+    fprintf(f, "svc_pipewire=%d\n", st->svc_pipewire);
+    fprintf(f, "svc_network=%d\n", st->svc_network);
+    fprintf(f, "svc_oomd=%d\n", st->svc_oomd);
     fprintf(f, "files_list_mode=%d\n", st->files_list_mode);
     fprintf(f, "files_sort_mode=%d\n", st->files_sort_mode);
     fprintf(f, "files_show_hidden=%d\n", st->files_show_hidden);
+    fprintf(f, "media_sidebar_open=%d\n", st->media_sidebar_open);
+    fprintf(f, "media_folder_idx=%d\n", st->media_folder_idx);
     fprintf(f, "media_mode=%d\n", st->media_mode);
     fprintf(f, "media_grid_mode=%d\n", st->media_grid_mode);
     fprintf(f, "media_show_exif=%d\n", st->media_show_exif);
+    fprintf(f, "media_filter=%d\n", st->media_filter);
     fprintf(f, "media_selected=%d\n", st->media_selected);
+    fprintf(f, "video_selected=%d\n", st->video_selected);
+    fprintf(f, "video_loop=%d\n", st->video_loop);
+    fprintf(f, "video_hud=%d\n", st->video_hud);
+    fprintf(f, "video_speed_x10=%d\n", st->video_speed_x10);
     fprintf(f, "audio_selected=%d\n", st->audio_selected);
     fprintf(f, "audio_loop=%d\n", st->audio_loop);
     fprintf(f, "audio_shuffle=%d\n", st->audio_shuffle);
@@ -159,6 +177,7 @@ void nature_os_save_state(const NatureOSState *st_in) {
     for (int i = 0; i < st->vfs_count && i < MAX_VFS; ++i) {
         const VfsNode *n = &st->vfs[i];
         fprintf(f, "vfs_%d_meta=%d,%d,%d,%d\n", i, n->is_dir ? 1 : 0, n->size_bytes, n->image_idx, n->audio_idx);
+        fprintf(f, "vfs_%d_vid=%d\n", i, n->video_idx);
         char kbuf[32];
         snprintf(kbuf, sizeof(kbuf), "vfs_%d_name", i); write_escaped_line(f, kbuf, n->name);
         snprintf(kbuf, sizeof(kbuf), "vfs_%d_path", i); write_escaped_line(f, kbuf, n->path);
@@ -202,6 +221,17 @@ void nature_os_load_state(NatureOSState *st) {
         else if (strcmp(k, "custom_wp_media_idx") == 0) st->custom_wp_media_idx = clamp_i(atoi(v), -1, MAX_MEDIA_IMAGES - 1);
         else if (strcmp(k, "accent_idx") == 0) st->cfg.accent_idx = clamp_i(atoi(v), 0, 5);
         else if (strcmp(k, "dock_position") == 0) st->cfg.dock_position = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "dock_size") == 0) st->cfg.dock_size = clamp_i(atoi(v), 0, 2);
+        else if (strcmp(k, "animations_enabled") == 0) st->cfg.animations_enabled = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "show_panel_stats") == 0) st->cfg.show_panel_stats = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "telemetry_ms") == 0) {
+            int tv = atoi(v);
+            st->cfg.telemetry_ms = (tv == 250 || tv == 1000) ? tv : 500;
+        }
+        else if (strcmp(k, "auto_lock_min") == 0) {
+            int lv = atoi(v);
+            st->cfg.auto_lock_min = (lv == 5 || lv == 15) ? lv : 0;
+        }
         else if (strcmp(k, "low_power_mode") == 0) st->cfg.low_power_mode = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "zram_enabled") == 0) st->cfg.zram_enabled = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "wifi_enabled") == 0) st->cfg.wifi_enabled = clamp_i(atoi(v), 0, 1);
@@ -219,21 +249,34 @@ void nature_os_load_state(NatureOSState *st) {
         else if (strcmp(k, "window_snap") == 0) st->cfg.window_snap = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "show_desktop_widgets") == 0) st->cfg.show_desktop_widgets = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "show_toast_popups") == 0) st->cfg.show_toast_popups = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "term_font_size") == 0) st->cfg.term_font_size = clamp_i(atoi(v), 10, 14);
+        else if (strcmp(k, "compact_chrome") == 0) st->cfg.compact_chrome = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "show_dock_labels") == 0) st->cfg.show_dock_labels = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "device_name") == 0) {
             unescape_str(v, st->cfg.device_name, sizeof(st->cfg.device_name));
             if (!st->cfg.device_name[0]) snprintf(st->cfg.device_name, sizeof(st->cfg.device_name), "nature-pc");
             snprintf(st->settings_hostname_draft, sizeof(st->settings_hostname_draft), "%s", st->cfg.device_name);
         }
         else if (strcmp(k, "active_workspace") == 0) st->active_workspace = clamp_i(atoi(v), 0, 1);
-        else if (strcmp(k, "settings_section") == 0) st->settings_section = clamp_i(atoi(v), 0, 6);
+        else if (strcmp(k, "settings_section") == 0) st->settings_section = clamp_i(atoi(v), 0, 7);
         else if (strcmp(k, "settings_update_checked") == 0) st->settings_update_checked = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "svc_pipewire") == 0) st->svc_pipewire = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "svc_network") == 0) st->svc_network = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "svc_oomd") == 0) st->svc_oomd = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "files_list_mode") == 0) st->files_list_mode = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "files_sort_mode") == 0) st->files_sort_mode = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "files_show_hidden") == 0) st->files_show_hidden = clamp_i(atoi(v), 0, 1);
-        else if (strcmp(k, "media_mode") == 0) st->media_mode = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "media_sidebar_open") == 0) st->media_sidebar_open = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "media_folder_idx") == 0) st->media_folder_idx = clamp_i(atoi(v), 0, 16);
+        else if (strcmp(k, "media_mode") == 0) st->media_mode = clamp_i(atoi(v), 0, 2);
         else if (strcmp(k, "media_grid_mode") == 0) st->media_grid_mode = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "media_show_exif") == 0) st->media_show_exif = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "media_filter") == 0) st->media_filter = clamp_i(atoi(v), 0, 3);
         else if (strcmp(k, "media_selected") == 0) st->media_selected = clamp_i(atoi(v), 0, MAX_MEDIA_IMAGES - 1);
+        else if (strcmp(k, "video_selected") == 0) st->video_selected = clamp_i(atoi(v), 0, MAX_VIDEO_CLIPS - 1);
+        else if (strcmp(k, "video_loop") == 0) st->video_loop = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "video_hud") == 0) st->video_hud = clamp_i(atoi(v), 0, 1);
+        else if (strcmp(k, "video_speed_x10") == 0) st->video_speed_x10 = clamp_i(atoi(v), 5, 20);
         else if (strcmp(k, "audio_selected") == 0) st->audio_selected = clamp_i(atoi(v), 0, MAX_AUDIO_TRACKS - 1);
         else if (strcmp(k, "audio_loop") == 0) st->audio_loop = clamp_i(atoi(v), 0, 1);
         else if (strcmp(k, "audio_shuffle") == 0) st->audio_shuffle = clamp_i(atoi(v), 0, 1);
@@ -297,6 +340,11 @@ void nature_os_load_state(NatureOSState *st) {
             has_vfs = 1;
             loaded_vfs = vc;
             memset(st->vfs, 0, sizeof(st->vfs));
+            for (int vi_init = 0; vi_init < MAX_VFS; ++vi_init) {
+                st->vfs[vi_init].image_idx = -1;
+                st->vfs[vi_init].audio_idx = -1;
+                st->vfs[vi_init].video_idx = -1;
+            }
             st->vfs_count = vc;
         } else if (has_vfs && strncmp(k, "vfs_", 4) == 0 && isdigit((unsigned char)k[4])) {
             int vi = atoi(k + 4);
@@ -311,6 +359,8 @@ void nature_os_load_state(NatureOSState *st) {
                         n->image_idx = imgi;
                         n->audio_idx = audi;
                     }
+                } else if (strcmp(sub, "_vid") == 0) {
+                    n->video_idx = clamp_i(atoi(v), -1, MAX_VIDEO_CLIPS - 1);
                 } else if (strcmp(sub, "_name") == 0) {
                     unescape_str(v, n->name, sizeof(n->name));
                 } else if (strcmp(sub, "_path") == 0) {
@@ -340,6 +390,10 @@ void nature_os_load_state(NatureOSState *st) {
         int valid = 0;
         for (int i = 0; i < st->vfs_count; ++i) {
             if (st->vfs[i].path[0] && st->vfs[i].name[0]) {
+                if (strcmp(st->vfs[i].mime_tag, "VID") == 0 && st->vfs[i].video_idx < 0) {
+                    st->vfs[i].video_idx = 0;
+                    if (st->vfs[i].image_idx < 0) st->vfs[i].image_idx = 6;
+                }
                 if (valid != i) st->vfs[valid] = st->vfs[i];
                 valid++;
             }
@@ -359,6 +413,11 @@ void nature_os_reset_defaults(NatureOSState *st) {
     st->custom_wp_media_idx = -1;
     st->cfg.accent_idx = 0;
     st->cfg.dock_position = 0;
+    st->cfg.dock_size = 1;
+    st->cfg.animations_enabled = 1;
+    st->cfg.show_panel_stats = 1;
+    st->cfg.telemetry_ms = 500;
+    st->cfg.auto_lock_min = 0;
     st->cfg.low_power_mode = 0;
     st->cfg.zram_enabled = 1;
     st->cfg.wifi_enabled = 1;
@@ -376,6 +435,13 @@ void nature_os_reset_defaults(NatureOSState *st) {
     st->cfg.window_snap = 1;
     st->cfg.show_desktop_widgets = 1;
     st->cfg.show_toast_popups = 1;
+    st->cfg.term_font_size = 12;
+    st->cfg.compact_chrome = 0;
+    st->cfg.show_dock_labels = 1;
+    st->svc_pipewire = 1;
+    st->svc_network = 1;
+    st->svc_oomd = 1;
+    st->media_sidebar_open = 1;
     snprintf(st->cfg.device_name, sizeof(st->cfg.device_name), "nature-pc");
     snprintf(st->settings_hostname_draft, sizeof(st->settings_hostname_draft), "nature-pc");
     st->settings_hostname_dirty = 0;
@@ -384,6 +450,7 @@ void nature_os_reset_defaults(NatureOSState *st) {
     st->settings_net_ping_ms = -1;
     st->cal_month_offset = 0;
     st->files_show_hidden = 1;
+    st->media_filter = 0;
     st->audio_eq_preset = 0;
     for (int i = 0; i < st->window_count; ++i) {
         clamp_window_to_screen(st, &st->windows[i]);
@@ -418,7 +485,7 @@ void nature_os_reset_all_session(NatureOSState *st) {
     for (int i = 0; i < 9 && i < MAX_MEDIA_IMAGES; ++i) st->media_images[i] = meds[i];
     st->avatar_surface = av;
     snprintf(st->state_file_path, sizeof(st->state_file_path), "%s", saved_path);
-    st->settings_section = 6;
+    st->settings_section = 7;
     nature_os_resize(st, cur_w, cur_h);
     nature_os_save_state(st);
     nature_notify(st, "Factory Reset", "Restored stock Nature OS apps, files & settings.");

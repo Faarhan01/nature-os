@@ -4,20 +4,22 @@
 #include <cstdio>
 #include <cstring>
 
-#define NUM_TABS 4
+#define NUM_TABS 5
 
 static const char *BROWSER_URLS[NUM_TABS] = {
     "nature://portal",
     "nature://architecture",
     "nature://ubuntu-integration",
-    "nature://multitasking-benchmarks"
+    "nature://multitasking-benchmarks",
+    "nature://developer"
 };
 
 static const char *BROWSER_TITLES[NUM_TABS] = {
     "System Portal",
     "Architecture",
     "Ubuntu 24.04 Base",
-    "Benchmarks"
+    "Benchmarks",
+    "DevTools & APIs"
 };
 
 static int str_ci_contains(const char *hay, const char *needle) {
@@ -163,17 +165,19 @@ void nature_browser_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, 
     g_ngfx.line_to(cr, cx + cw, cy + 104.5);
     g_ngfx.stroke(cr);
 
-    struct { const char *lbl; int act; int arg; } bms[7] = {
-        {"Portal", HIT_BROWSER_TAB, 0},
-        {"Architecture", HIT_BROWSER_TAB, 1},
-        {"Ubuntu Base", HIT_BROWSER_TAB, 2},
-        {"Benchmarks", HIT_BROWSER_TAB, 3},
-        {"Files", HIT_BROWSER_ACTION, APP_FILES},
-        {"Monitor", HIT_BROWSER_ACTION, APP_MONITOR},
-        {"Settings", HIT_BROWSER_ACTION, APP_SETTINGS},
+    struct { const char *lbl; int act; int arg; int arg1; } bms[9] = {
+        {"Portal", HIT_BROWSER_TAB, 0, 0},
+        {"Architecture", HIT_BROWSER_TAB, 1, 0},
+        {"Ubuntu Base", HIT_BROWSER_TAB, 2, 0},
+        {"Benchmarks", HIT_BROWSER_TAB, 3, 0},
+        {"DevTools", HIT_BROWSER_TAB, 4, 0},
+        {"Projects", HIT_BROWSER_ACTION, APP_FILES, 2},
+        {"Files", HIT_BROWSER_ACTION, APP_FILES, 0},
+        {"Monitor", HIT_BROWSER_ACTION, APP_MONITOR, 0},
+        {"Settings", HIT_BROWSER_ACTION, APP_SETTINGS, 0},
     };
     int bx = cx + 10;
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < 9; ++i) {
         int bw = (int)ngfx_text_width(cr, "Noto Sans", 0, 9.8, bms[i].lbl) + 16;
         if (bx + bw > cx + cw - 10) break;
         int is_cur = (bms[i].act == HIT_BROWSER_TAB && (st->browser_tab % NUM_TABS) == bms[i].arg);
@@ -188,7 +192,7 @@ void nature_browser_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, 
                   is_cur ? (dark ? pal.ar_hi : ar) : pal.fg_sec_r,
                   is_cur ? (dark ? pal.ag_hi : ag) : pal.fg_sec_g,
                   is_cur ? (dark ? pal.ab_hi : ab) : pal.fg_sec_b, 0.96, bms[i].lbl);
-        nature_add_hit(st, bx, cy + 81, bw, 20, bms[i].act, bms[i].arg, 0);
+        nature_add_hit(st, bx, cy + 81, bw, 20, bms[i].act, bms[i].arg, bms[i].arg1);
         bx += bw + 6;
     }
 
@@ -202,7 +206,8 @@ void nature_browser_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, 
     if (tab == 0) content_h = compact ? 426 : 362;
     else if (tab == 1) content_h = 345;
     else if (tab == 2) content_h = 295;
-    else content_h = 345;
+    else if (tab == 3) content_h = 428;
+    else content_h = 430;
 
     st->browser_max_scroll = std::max(0, content_h - doc_h);
     if (st->browser_scroll > st->browser_max_scroll) st->browser_scroll = st->browser_max_scroll;
@@ -404,37 +409,44 @@ void nature_browser_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, 
                           dark ? pal.ar_hi : ar, dark ? pal.ag_hi : ag, dark ? pal.ab_hi : ab, 1.0,
                           "$ sudo apt install nature-os-desktop");
         ngfx_text_clipped(cr, "JetBrains Mono", 0, 10.6, px + 14, py + 106, pw - 28, fg_r, fg_g, fg_b, 0.9,
-                          "Depends: ubuntu-minimal, systemd, pipewire, libcairo2, zlib1g, zram-tools");
+                          "Depends: ubuntu-minimal, systemd, pipewire, libcairo2, nodejs-22, python3");
         ngfx_text_clipped(cr, "JetBrains Mono", 0, 10.6, px + 14, py + 130, pw - 28, fg_r, fg_g, fg_b, 0.9,
-                          "Schemas: /usr/share/glib-2.0/schemas/org.natureos.desktop.gschema.xml");
+                          "Network: NetworkManager (wlp2s0) · OOM: systemd-oomd (cgroup v2)");
         ngfx_text_clipped(cr, "JetBrains Mono", 0, 10.6, px + 14, py + 154, pw - 28, fg_r, fg_g, fg_b, 0.9,
                           "Session: /usr/lib/systemd/user/nature-session.service (CPUWeight=300)");
 
         int bw_u = (pw - 12) / 2;
         int by_u = py + 214;
-        ngfx_fill_gradient(cr, px, by_u, bw_u, 34, 9, ar, ag, ab, 0.94, ar * 0.78, ag * 0.78, ab * 0.78, 0.94, 0);
+        int hov_store = (st->hover_hit_action == HIT_BROWSER_ACTION && st->hover_hit_arg0 == APP_STORE);
+        ngfx_fill_gradient(cr, px, by_u, bw_u, 34, 9,
+                           ar * (hov_store ? 1.12 : 1.0), ag * (hov_store ? 1.12 : 1.0), ab * (hov_store ? 1.12 : 1.0), 0.96,
+                           ar * 0.78, ag * 0.78, ab * 0.78, 0.96, 0);
         ngfx_text_clipped(cr, "Noto Sans", 1, 11.0, px + 16, by_u + 21, bw_u - 24, pal.on_acc_r, pal.on_acc_g, pal.on_acc_b, 1.0, "Open Ubuntu Software");
         if (by_u + 34 > doc_y && by_u < doc_y + doc_h) {
             nature_add_hit(st, px, std::max(doc_y, by_u), bw_u, 34, HIT_BROWSER_ACTION, APP_STORE, 0);
         }
 
         int b2x = px + bw_u + 12;
-        ngfx_fill_rect(cr, b2x, by_u, bw_u, 34, 9, pal.card_r, pal.card_g, pal.card_b, 0.96);
-        ngfx_stroke_rect(cr, b2x + 0.5, by_u + 0.5, bw_u - 1, 33, 9, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        int hov_etc = (st->hover_hit_action == HIT_BROWSER_ACTION && st->hover_hit_arg0 == APP_FILES);
+        ngfx_fill_rect(cr, b2x, by_u, bw_u, 34, 9,
+                       hov_etc ? pal.hover_r : pal.card_r, hov_etc ? pal.hover_g : pal.card_g, hov_etc ? pal.hover_b : pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, b2x + 0.5, by_u + 0.5, bw_u - 1, 33, 9, 0.9,
+                         hov_etc ? ar : pal.border_r, hov_etc ? ag : pal.border_g, hov_etc ? ab : pal.border_b, hov_etc ? 0.65 : pal.border_a);
         ngfx_text_clipped(cr, "Noto Sans", 1, 11.0, b2x + 16, by_u + 21, bw_u - 24, fg_r, fg_g, fg_b, 0.96, "Inspect /etc/nature-os");
         if (by_u + 34 > doc_y && by_u < doc_y + doc_h) {
             nature_add_hit(st, b2x, std::max(doc_y, by_u), bw_u, 34, HIT_BROWSER_ACTION, APP_FILES, 1);
         }
-    } else {
+    } else if (tab == 3) {
         ngfx_text_clipped(cr, "Plus Jakarta Sans", 1, compact ? 15.5 : 19.0, px, py + 14, pw - 178, fg_r, fg_g, fg_b, 1.0,
                           "Live Runtime & Memory Footprint");
 
         int bbtn_w = compact ? 132 : 168;
         int bbtn_x = px + pw - bbtn_w;
+        int hov_bm = (st->hover_hit_action == HIT_BROWSER_RUN_STRESS);
         ngfx_fill_rect(cr, bbtn_x, py - 4, bbtn_w, 28, 8,
-                       st->stress_active ? pal.danger_r : ar,
-                       st->stress_active ? pal.danger_g : ag,
-                       st->stress_active ? pal.danger_b : ab, 0.94);
+                       (st->stress_active ? pal.danger_r : ar) * (hov_bm ? 1.10 : 1.0),
+                       (st->stress_active ? pal.danger_g : ag) * (hov_bm ? 1.10 : 1.0),
+                       (st->stress_active ? pal.danger_b : ab) * (hov_bm ? 1.10 : 1.0), 0.94);
         ngfx_text_clipped(cr, "Noto Sans", 1, 10.4, bbtn_x + 12, py + 14, bbtn_w - 20,
                           st->stress_active ? 1.0 : pal.on_acc_r,
                           st->stress_active ? 1.0 : pal.on_acc_g,
@@ -481,6 +493,96 @@ void nature_browser_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, 
                            (i == 2 && st->stress_active) ? pal.warning_b : ab, 0.94);
             ry += 60;
         }
+
+        /* Live CPU Telemetry Sparkline Card */
+        ngfx_fill_rect(cr, px, ry, pw, 78, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, ry + 0.5, pw - 1, 77, 10, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        double pk = 0.0;
+        for (int i = 0; i < 48; ++i) pk = std::max(pk, std::clamp(st->cpu_history[i], 0.0, 100.0));
+        char spk_lbl[64];
+        std::snprintf(spk_lbl, sizeof(spk_lbl), "Live /proc CPU Trace · Peak %.1f%%", pk);
+        ngfx_text(cr, "Plus Jakarta Sans", 1, 10.6, px + 14, ry + 18, fg_r, fg_g, fg_b, 0.96, spk_lbl);
+        int gx = px + 14, gy_c = ry + 25, gw = pw - 28, gh = 42;
+        ngfx_fill_rect(cr, gx, gy_c, gw, gh, 5, pal.elev_r, pal.elev_g, pal.elev_b, 0.55);
+        g_ngfx.new_sub_path(cr);
+        for (int i = 0; i < 48; ++i) {
+            double v = std::clamp(st->cpu_history[i], 0.0, 100.0) / 100.0;
+            double sx = gx + (gw * i) / 47.0;
+            double sy = gy_c + gh - v * (gh - 4) - 2;
+            if (i == 0) g_ngfx.move_to(cr, sx, sy);
+            else g_ngfx.line_to(cr, sx, sy);
+        }
+        g_ngfx.set_source_rgba(cr, dark ? pal.ar_hi : ar, dark ? pal.ag_hi : ag, dark ? pal.ab_hi : ab, 0.95);
+        g_ngfx.set_line_width(cr, 1.8);
+        g_ngfx.stroke(cr);
+    } else if (tab == 4) {
+        /* DevTools & Host APIs */
+        ngfx_text(cr, "Plus Jakarta Sans", 1, 15.0, px, py + 14, fg_r, fg_g, fg_b, 1.0, "Developer Tools & Host Web APIs");
+        ngfx_text(cr, "JetBrains Mono", 0, 9.6, px, py + 30, mut_r, mut_g, mut_b, 0.92,
+                  "Real-time Wayland pipeline · NAT3 binary wire protocol · REST JSON endpoints");
+
+        int card_y = py + 44;
+        int d_cols = pw >= 540 ? 2 : 1;
+        int d_w = (pw - (d_cols - 1) * 12) / d_cols;
+        int d_h = 158;
+
+        /* Compositor Core Pipeline Card */
+        ngfx_fill_rect(cr, px, card_y, d_w, d_h, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, card_y + 0.5, d_w - 1, d_h - 1, 10, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_text(cr, "Plus Jakarta Sans", 1, 11.8, px + 14, card_y + 20, fg_r, fg_g, fg_b, 1.0, "nature-compositor Pipeline");
+        ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.2, px + 14, card_y + 40, d_w - 28, mut_r, mut_g, mut_b, 0.95, "Surface: Cairo 1.18 ARGB32 Framebuffer");
+        ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.2, px + 14, card_y + 58, d_w - 28, mut_r, mut_g, mut_b, 0.95, "Stream: NAT3 Dirty Tile Compression");
+        ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.2, px + 14, card_y + 76, d_w - 28, mut_r, mut_g, mut_b, 0.95, "Target Cadence: 60 Hz / 120 Hz Low-Latency");
+        ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.2, px + 14, card_y + 94, d_w - 28, mut_r, mut_g, mut_b, 0.95, "Tile Matrix: 64x45 px (320 blocks / 720p)");
+
+        char fps_rss[96];
+        std::snprintf(fps_rss, sizeof(fps_rss), "Compositor RSS: %d MiB · Measured: %.1f FPS", st->os_rss_mb, st->measured_fps);
+        ngfx_text_clipped(cr, "JetBrains Mono", 1, 9.0, px + 14, card_y + 118, d_w - 28, dark ? pal.ar_hi : ar, dark ? pal.ag_hi : ag, dark ? pal.ab_hi : ab, 0.96, fps_rss);
+
+        int foc_btn_hov = (st->hover_hit_action == HIT_BROWSER_ACTION && st->hover_hit_arg0 == APP_MONITOR);
+        ngfx_fill_rect(cr, px + 14, card_y + 128, 128, 22, 6,
+                       foc_btn_hov ? ar : pal.elev_r, foc_btn_hov ? ag : pal.elev_g, foc_btn_hov ? ab : pal.elev_b, 0.92);
+        ngfx_text(cr, "Noto Sans", 1, 9.2, px + 22, card_y + 143, foc_btn_hov ? pal.on_acc_r : fg_r, foc_btn_hov ? pal.on_acc_g : fg_g, foc_btn_hov ? pal.on_acc_b : fg_b, 1.0, "Open System Monitor");
+        nature_add_hit(st, px + 14, card_y + 128, 128, 22, HIT_BROWSER_ACTION, APP_MONITOR, 0);
+
+        /* Host Gateway REST Endpoints Card */
+        int r_x = d_cols == 2 ? (px + d_w + 12) : px;
+        int r_y = d_cols == 2 ? card_y : (card_y + d_h + 10);
+        ngfx_fill_rect(cr, r_x, r_y, d_w, d_h, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, r_x + 0.5, r_y + 0.5, d_w - 1, d_h - 1, 10, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_text(cr, "Plus Jakarta Sans", 1, 11.8, r_x + 14, r_y + 20, fg_r, fg_g, fg_b, 1.0, "Host HTTP/WebSocket Gateway");
+
+        ngfx_text_clipped(cr, "JetBrains Mono", 1, 9.2, r_x + 14, r_y + 40, d_w - 28, pal.success_r, pal.success_g, pal.success_b, 1.0, "GET /api/health [200 OK]");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 8.8, r_x + 14, r_y + 54, d_w - 28, mut_r, mut_g, mut_b, 0.90, "System status, distro version & runtime telemetry");
+
+        ngfx_text_clipped(cr, "JetBrains Mono", 1, 9.2, r_x + 14, r_y + 72, d_w - 28, dark ? pal.ar_hi : ar, dark ? pal.ag_hi : ag, dark ? pal.ab_hi : ab, 1.0, "WS  /api/os-stream [101 Switch]");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 8.8, r_x + 14, r_y + 86, d_w - 28, mut_r, mut_g, mut_b, 0.90, "Bi-directional dirty tiles, touch & keyboard channel");
+
+        ngfx_text_clipped(cr, "JetBrains Mono", 1, 9.2, r_x + 14, r_y + 104, d_w - 28, pal.success_r, pal.success_g, pal.success_b, 1.0, "GET /api/system/host-metrics [200 OK]");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 8.8, r_x + 14, r_y + 118, d_w - 28, mut_r, mut_g, mut_b, 0.90, "Hardware CPU count, Linux architecture & uptime");
+
+        int term_btn_hov = (st->hover_hit_action == HIT_BROWSER_ACTION && st->hover_hit_arg0 == APP_TERMINAL);
+        ngfx_fill_rect(cr, r_x + 14, r_y + 128, 128, 22, 6,
+                       term_btn_hov ? ar : pal.elev_r, term_btn_hov ? ag : pal.elev_g, term_btn_hov ? ab : pal.elev_b, 0.92);
+        ngfx_text(cr, "Noto Sans", 1, 9.2, r_x + 22, r_y + 143, term_btn_hov ? pal.on_acc_r : fg_r, term_btn_hov ? pal.on_acc_g : fg_g, term_btn_hov ? pal.on_acc_b : fg_b, 1.0, "Launch Node.js Terminal");
+        nature_add_hit(st, r_x + 14, r_y + 128, 128, 22, HIT_BROWSER_ACTION, APP_TERMINAL, 0);
+
+        /* Lower Card: Active Environment & Node Runtime */
+        int env_y = d_cols == 2 ? (card_y + d_h + 12) : (r_y + d_h + 10);
+        int env_h = 104;
+        ngfx_fill_rect(cr, px, env_y, pw, env_h, 10, pal.card_r, pal.card_g, pal.card_b, 0.96);
+        ngfx_stroke_rect(cr, px + 0.5, env_y + 0.5, pw - 1, env_h - 1, 10, 0.9, pal.border_r, pal.border_g, pal.border_b, pal.border_a);
+        ngfx_text(cr, "Plus Jakarta Sans", 1, 11.8, px + 14, env_y + 20, fg_r, fg_g, fg_b, 1.0, "Shell Runtime & VFS Workspaces");
+        ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.4, px + 14, env_y + 40, pw - 28, mut_r, mut_g, mut_b, 0.92,
+                          "Node: v22.12.0  ·  Python: 3.12.3  ·  Git: 2.43.0  ·  Bash: 5.2.21(1)-release");
+        ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.4, px + 14, env_y + 58, pw - 28, mut_r, mut_g, mut_b, 0.92,
+                          "Workspace Root: /home/nature/Projects  ·  VFS Nodes: 36  ·  Persistence: session.cfg");
+
+        int proj_btn_hov = (st->hover_hit_action == HIT_BROWSER_ACTION && st->hover_hit_arg0 == APP_FILES && st->hover_hit_arg1 == 2);
+        ngfx_fill_rect(cr, px + 14, env_y + 72, 138, 22, 6,
+                       proj_btn_hov ? ar : pal.elev_r, proj_btn_hov ? ag : pal.elev_g, proj_btn_hov ? ab : pal.elev_b, 0.92);
+        ngfx_text(cr, "Noto Sans", 1, 9.2, px + 22, env_y + 87, proj_btn_hov ? pal.on_acc_r : fg_r, proj_btn_hov ? pal.on_acc_g : fg_g, proj_btn_hov ? pal.on_acc_b : fg_b, 1.0, "Browse Projects Files");
+        nature_add_hit(st, px + 14, env_y + 72, 138, 22, HIT_BROWSER_ACTION, APP_FILES, 2);
     }
 
     g_ngfx.restore(cr);
@@ -499,6 +601,7 @@ void nature_browser_wheel(NatureOSState *st, int delta_y) {
 
 void nature_browser_key(NatureOSState *st, const char *key) {
     if (!key || !*key) return;
+    if (std::strcmp(key, "Space") == 0) key = " ";
     if (std::strcmp(key, "Backspace") == 0) {
         size_t len = std::strlen(st->browser_url_input);
         if (len > 0) st->browser_url_input[len - 1] = '\0';
@@ -511,7 +614,8 @@ void nature_browser_key(NatureOSState *st, const char *key) {
             else if (str_ci_contains(q, "arch") || std::strcmp(q, "1") == 0) st->browser_tab = 1;
             else if (str_ci_contains(q, "ubuntu") || str_ci_contains(q, "noble") || std::strcmp(q, "2") == 0) st->browser_tab = 2;
             else if (str_ci_contains(q, "bench") || str_ci_contains(q, "multi") || std::strcmp(q, "3") == 0) st->browser_tab = 3;
-            else nature_notify(st, "Sylva Browser", "Local routes: portal, arch, ubuntu, bench");
+            else if (str_ci_contains(q, "dev") || str_ci_contains(q, "api") || std::strcmp(q, "4") == 0) st->browser_tab = 4;
+            else nature_notify(st, "Sylva Browser", "Local routes: portal, arch, ubuntu, bench, dev");
         }
         st->browser_scroll = 0;
         st->active_text_target = 0;
@@ -550,6 +654,10 @@ void nature_browser_click(NatureOSState *st, const HitRect *hit) {
     } else if (hit->action_id == HIT_BROWSER_ACTION) {
         if (hit->arg0 == APP_FILES && hit->arg1 == 1) {
             std::snprintf(st->files_cwd, sizeof(st->files_cwd), "/etc/nature-os");
+            st->files_selected_idx = -1;
+            st->files_scroll = 0;
+        } else if (hit->arg0 == APP_FILES && hit->arg1 == 2) {
+            std::snprintf(st->files_cwd, sizeof(st->files_cwd), "/home/nature/Projects");
             st->files_selected_idx = -1;
             st->files_scroll = 0;
         }

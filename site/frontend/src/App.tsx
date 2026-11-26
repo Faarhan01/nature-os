@@ -79,9 +79,13 @@ export default function App() {
   const selectView = (nextView: ViewMode) => {
     setView(nextView);
     setMobileMenuOpen(false);
+    if (nextView === 'display') {
+      requestAnimationFrame(() => window.dispatchEvent(new Event('nature-focus-canvas')));
+    }
   };
 
-  const handleFullscreenClick = () => {
+  const handleFullscreenClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
     setMobileMenuOpen(false);
     if (view !== 'display') {
       setView('display');
@@ -134,7 +138,10 @@ export default function App() {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => selectView(item.id)}
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    selectView(item.id);
+                  }}
                   className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors min-h-[44px] ${
                     active
                       ? 'bg-emerald-500/12 text-white border border-emerald-500/25'
@@ -155,7 +162,9 @@ export default function App() {
                         {item.label}
                       </span>
                       {item.id === 'stress' && isStressed && (
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+                        <span className="font-mono text-[9px] font-semibold uppercase tracking-wider text-red-400 shrink-0">
+                          LOAD
+                        </span>
                       )}
                     </div>
                     <div className="text-[10.5px] text-neutral-500 truncate">{item.hint}</div>
@@ -280,7 +289,10 @@ export default function App() {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => selectView(item.id)}
+                      onClick={(e) => {
+                        e.currentTarget.blur();
+                        selectView(item.id);
+                      }}
                       className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left transition-colors min-h-[46px] ${
                         active
                           ? 'bg-emerald-500/15 text-white border border-emerald-500/30'
@@ -297,7 +309,9 @@ export default function App() {
                         </div>
                       </div>
                       {item.id === 'stress' && isStressed && (
-                        <span className="h-2 w-2 rounded-full bg-red-400" />
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-red-400 shrink-0">
+                          LOAD
+                        </span>
                       )}
                     </button>
                   );
@@ -325,12 +339,16 @@ export default function App() {
             <span className="text-xs text-neutral-400">{activeNav.hint}</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {view === 'display' && (
               <button
                 type="button"
-                onClick={() => canvasRef.current?.takeScreenshot()}
-                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/[0.07] hover:text-white transition-colors min-h-[34px]"
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  canvasRef.current?.takeScreenshot();
+                  window.dispatchEvent(new Event('nature-focus-canvas'));
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-white/[0.07] hover:text-white transition-colors min-h-[34px] whitespace-nowrap shrink-0"
                 title="Save desktop screenshot"
               >
                 <Camera className="h-3.5 w-3.5" />
@@ -340,7 +358,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleFullscreenClick}
-              className="flex items-center gap-1.5 rounded-lg bg-[#2E8B57] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#257347] transition-colors min-h-[34px] shadow-md"
+              className="flex items-center gap-1.5 rounded-lg bg-[#2E8B57] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#257347] transition-colors min-h-[34px] shadow-md whitespace-nowrap shrink-0"
               title="Make the Nature OS screen fullscreen"
             >
               {isOsFullscreen ? (

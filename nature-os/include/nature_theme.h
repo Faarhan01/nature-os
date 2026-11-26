@@ -36,6 +36,12 @@ void ntheme_draw_avatar(cairo_t *cr, cairo_surface_t *img, double x, double y, d
 
 void ntheme_draw_modal_scrim(cairo_t *cr, double w, double h, double alpha);
 
+void ntheme_draw_section_header(cairo_t *cr, double x, double y, double w,
+                                const NaturePalette *pal, const char *title, const char *right_meta);
+
+void ntheme_draw_kbd_chip(cairo_t *cr, double x, double y, double h,
+                          const NaturePalette *pal, const char *key_label, double *out_w);
+
 #ifdef __cplusplus
 }
 #endif

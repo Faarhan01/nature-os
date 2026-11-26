@@ -22,7 +22,15 @@ static int str_ci_match(const char *hay, const char *needle) {
 extern "C" {
 
 void nature_store_init(NatureOSState *st) {
-    const AptPkg initial[12] = {
+    const AptPkg initial[16] = {
+        {"nodejs", "Node.js 22 LTS Runtime", "Development", "22.12.0-1nodesource1", "apt (noble-nodesource)",
+         "V8 JavaScript runtime with fs, os, http & process APIs.", 318, 42, 1, 100},
+        {"npm", "npm Package Manager", "Development", "10.9.0-noble", "apt (noble-universe)",
+         "Node.js package runner, script executor, and npx CLI.", 112, 24, 1, 100},
+        {"python3", "Python 3.12 Interpreter", "Development", "3.12.3-0ubuntu2", "apt (noble-main)",
+         "High-level scripting interpreter for automation & diagnostics.", 286, 28, 1, 100},
+        {"git", "Git Distributed VCS", "Development", "2.43.0-1ubuntu7", "apt (noble-main)",
+         "Fast distributed version control for ~/Projects workspaces.", 94, 18, 1, 100},
         {"neofetch", "Neofetch System Info", "Utilities", "7.1.0-4ubuntu1", "apt (noble-universe)",
          "CLI system summary utility for Ubuntu/Nature OS.", 4, 4, 1, 100},
         {"htop", "htop Process Viewer", "Utilities", "3.3.0-4build1", "apt (noble-main)",
@@ -48,8 +56,8 @@ void nature_store_init(NatureOSState *st) {
         {"blender", "Blender 3D Studio", "Creative", "4.0.2+dfsg-1", "apt (noble-universe)",
          "3D modeling & Vulkan/Wayland rendering pipeline.", 1420, 410, 0, 0},
     };
-    st->pkg_count = 12;
-    for (int i = 0; i < 12; ++i) st->pkgs[i] = initial[i];
+    st->pkg_count = 16;
+    for (int i = 0; i < 16; ++i) st->pkgs[i] = initial[i];
     st->store_selected = 0;
     st->store_scroll = 0;
     st->store_max_scroll = 0;
@@ -309,17 +317,23 @@ void nature_store_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, in
         ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.8, cx + 14, iy + 36, cw - left_pad, mut_r, mut_g, mut_b, 0.95, sinfo);
 
         int bx = cx + cw - 96;
+        int lhov = (st->hover_hit_action == HIT_STORE_LAUNCH_PKG && st->hover_hit_arg0 == st->store_selected);
+        int thov = (st->hover_hit_action == HIT_STORE_TOGGLE_PKG && st->hover_hit_arg0 == st->store_selected);
         if (sp.installed) {
             int lx = bx - 84;
-            ngfx_fill_gradient(cr, lx, iy + 10, 76, 28, 7, ar, ag, ab, 0.96, ar * 0.78, ag * 0.78, ab * 0.78, 0.96, 0);
+            ngfx_fill_gradient(cr, lx, iy + 10, 76, 28, 7,
+                               ar * (lhov ? 1.12 : 1.0), ag * (lhov ? 1.12 : 1.0), ab * (lhov ? 1.12 : 1.0), 0.96,
+                               ar * 0.78, ag * 0.78, ab * 0.78, 0.96, 0);
             ngfx_top_specular(cr, lx, iy + 10, 76, 7, 0.22);
             ngfx_text(cr, "Noto Sans", 1, 10.6, lx + 18, iy + 28, pal.on_acc_r, pal.on_acc_g, pal.on_acc_b, 1.0, "Launch");
             nature_add_hit(st, lx, iy + 10, 76, 28, HIT_STORE_LAUNCH_PKG, st->store_selected, 0);
 
-            ngfx_fill_rect(cr, bx, iy + 10, 82, 28, 7, pal.danger_r, pal.danger_g, pal.danger_b, 0.18);
+            ngfx_fill_rect(cr, bx, iy + 10, 82, 28, 7, pal.danger_r, pal.danger_g, pal.danger_b, thov ? 0.32 : 0.18);
+            if (thov) ngfx_stroke_rect(cr, bx + 0.5, iy + 10.5, 81, 27, 7, 0.8, pal.danger_r, pal.danger_g, pal.danger_b, 0.65);
             ngfx_text(cr, "Noto Sans", 1, 10.6, bx + 18, iy + 28, pal.danger_r, pal.danger_g, pal.danger_b, 1.0, "Remove");
         } else {
-            ngfx_fill_rect(cr, bx, iy + 10, 82, 28, 7, ar, ag, ab, 0.95);
+            ngfx_fill_rect(cr, bx, iy + 10, 82, 28, 7,
+                           ar * (thov ? 1.12 : 1.0), ag * (thov ? 1.12 : 1.0), ab * (thov ? 1.12 : 1.0), 0.95);
             ngfx_text(cr, "Noto Sans", 1, 10.6, bx + 22, iy + 28, pal.on_acc_r, pal.on_acc_g, pal.on_acc_b, 1.0, "Install");
         }
         nature_add_hit(st, bx, iy + 10, 82, 28, HIT_STORE_TOGGLE_PKG, st->store_selected, 0);
@@ -335,6 +349,7 @@ void nature_store_wheel(NatureOSState *st, int delta_y) {
 
 void nature_store_key(NatureOSState *st, const char *key) {
     if (!key || !*key) return;
+    if (std::strcmp(key, "Space") == 0) key = " ";
     if (std::strcmp(key, "Backspace") == 0) {
         size_t len = std::strlen(st->store_query);
         if (len > 0) st->store_query[len - 1] = '\0';
@@ -376,11 +391,24 @@ void nature_store_click(NatureOSState *st, const HitRect *hit) {
             if (std::strcmp(pname, "neofetch") == 0 || std::strcmp(pname, "htop") == 0) {
                 nature_open_app(st, APP_TERMINAL);
                 nature_terminal_exec(st, pname);
+            } else if (std::strcmp(pname, "nodejs") == 0) {
+                nature_open_app(st, APP_TERMINAL);
+                nature_terminal_exec(st, "node -v");
+            } else if (std::strcmp(pname, "npm") == 0) {
+                nature_open_app(st, APP_TERMINAL);
+                nature_terminal_exec(st, "npm -v");
+            } else if (std::strcmp(pname, "python3") == 0) {
+                nature_open_app(st, APP_TERMINAL);
+                nature_terminal_exec(st, "python3 -V");
+            } else if (std::strcmp(pname, "git") == 0) {
+                nature_open_app(st, APP_TERMINAL);
+                nature_terminal_exec(st, "git status");
             } else if (std::strcmp(pname, "btop") == 0) {
                 nature_open_app(st, APP_MONITOR);
             } else if (std::strcmp(pname, "vlc") == 0) {
                 st->media_mode = 1;
-                st->audio_playing = 1;
+                st->video_playing = 1;
+                st->video_progress_ms = 0;
                 nature_open_app(st, APP_MEDIA);
             } else if (std::strcmp(pname, "gimp") == 0 || std::strcmp(pname, "inkscape") == 0) {
                 st->media_mode = 0;

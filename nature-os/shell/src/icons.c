@@ -339,3 +339,56 @@ void draw_file_glyph_simple(cairo_t *cr, double x, double y, double w, double h,
     ngfx_fill_rect(cr, x + w * 0.20, y + h * 0.52, w * 0.45, 2.0, 1.0, r, g, b, a * 0.70);
     g_ngfx.restore(cr);
 }
+
+void draw_wifi_glyph(cairo_t *cr, double cx, double cy, double r, double g, double b, double a) {
+    g_ngfx.set_source_rgba(cr, r, g, b, a);
+    g_ngfx.set_line_width(cr, 1.4);
+    for (int k = 0; k < 3; ++k) {
+        double rad = 3.4 + k * 3.2;
+        g_ngfx.new_sub_path(cr);
+        g_ngfx.arc(cr, cx, cy + 5.0, rad, -2.4, -0.74);
+        g_ngfx.stroke(cr);
+    }
+    ngfx_fill_circle(cr, cx, cy + 4.5, 1.5, r, g, b, a);
+}
+
+void draw_speaker_glyph(cairo_t *cr, double cx, double cy, int muted, double r, double g, double b, double a) {
+    g_ngfx.set_source_rgba(cr, r, g, b, a);
+    g_ngfx.set_line_width(cr, 1.3);
+    g_ngfx.move_to(cr, cx - 5.5, cy - 3.2);
+    g_ngfx.line_to(cr, cx - 2.2, cy - 3.2);
+    g_ngfx.line_to(cr, cx + 2.2, cy - 6.8);
+    g_ngfx.line_to(cr, cx + 2.2, cy + 6.8);
+    g_ngfx.line_to(cr, cx - 2.2, cy + 3.2);
+    g_ngfx.line_to(cr, cx - 5.5, cy + 3.2);
+    g_ngfx.close_path(cr);
+    g_ngfx.fill(cr);
+
+    if (muted) {
+        g_ngfx.set_source_rgba(cr, 0.94, 0.32, 0.32, a);
+        g_ngfx.move_to(cr, cx + 5.0, cy - 4.0);
+        g_ngfx.line_to(cr, cx + 10.5, cy + 4.0);
+        g_ngfx.move_to(cr, cx + 10.5, cy - 4.0);
+        g_ngfx.line_to(cr, cx + 5.0, cy + 4.0);
+        g_ngfx.stroke(cr);
+    } else {
+        g_ngfx.new_sub_path(cr);
+        g_ngfx.arc(cr, cx + 1.5, cy, 5.4, -0.65, 0.65);
+        g_ngfx.stroke(cr);
+        g_ngfx.new_sub_path(cr);
+        g_ngfx.arc(cr, cx + 1.5, cy, 8.4, -0.65, 0.65);
+        g_ngfx.stroke(cr);
+    }
+}
+
+void draw_sun_glyph(cairo_t *cr, double cx, double cy, double r, double g, double b, double a) {
+    ngfx_fill_circle(cr, cx, cy, 3.8, r, g, b, a);
+    g_ngfx.set_source_rgba(cr, r, g, b, a);
+    g_ngfx.set_line_width(cr, 1.3);
+    for (int k = 0; k < 8; ++k) {
+        double ang = k * (3.14159265 / 4.0);
+        g_ngfx.move_to(cr, cx + cos(ang) * 5.2, cy + sin(ang) * 5.2);
+        g_ngfx.line_to(cr, cx + cos(ang) * 7.5, cy + sin(ang) * 7.5);
+    }
+    g_ngfx.stroke(cr);
+}

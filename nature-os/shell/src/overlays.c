@@ -13,60 +13,7 @@ static const char *QS_AUDIO_TITLES[MAX_AUDIO_TRACKS] = {
     "Horizon Startup Chime"
 };
 
-/* --- Quick Settings Glyphs & Helpers --- */
-
-static void draw_wifi_glyph(cairo_t *cr, double cx, double cy, double r, double g, double b, double a) {
-    g_ngfx.set_source_rgba(cr, r, g, b, a);
-    g_ngfx.set_line_width(cr, 1.4);
-    for (int k = 0; k < 3; ++k) {
-        double rad = 3.6 + k * 3.4;
-        g_ngfx.new_sub_path(cr);
-        g_ngfx.arc(cr, cx, cy + 5, rad, -2.4, -0.74);
-        g_ngfx.stroke(cr);
-    }
-    ngfx_fill_circle(cr, cx, cy + 4.5, 1.6, r, g, b, a);
-}
-
-static void draw_speaker_glyph(cairo_t *cr, double cx, double cy, int muted, double r, double g, double b, double a) {
-    g_ngfx.set_source_rgba(cr, r, g, b, a);
-    g_ngfx.set_line_width(cr, 1.3);
-    g_ngfx.move_to(cr, cx - 6, cy - 3.5);
-    g_ngfx.line_to(cr, cx - 2.5, cy - 3.5);
-    g_ngfx.line_to(cr, cx + 2.5, cy - 7.5);
-    g_ngfx.line_to(cr, cx + 2.5, cy + 7.5);
-    g_ngfx.line_to(cr, cx - 2.5, cy + 3.5);
-    g_ngfx.line_to(cr, cx - 6, cy + 3.5);
-    g_ngfx.close_path(cr);
-    g_ngfx.fill(cr);
-
-    if (muted) {
-        g_ngfx.set_source_rgba(cr, 0.94, 0.32, 0.32, a);
-        g_ngfx.move_to(cr, cx + 5.5, cy - 4.5);
-        g_ngfx.line_to(cr, cx + 11.5, cy + 4.5);
-        g_ngfx.move_to(cr, cx + 11.5, cy - 4.5);
-        g_ngfx.line_to(cr, cx + 5.5, cy + 4.5);
-        g_ngfx.stroke(cr);
-    } else {
-        g_ngfx.new_sub_path(cr);
-        g_ngfx.arc(cr, cx + 1.5, cy, 6.0, -0.65, 0.65);
-        g_ngfx.stroke(cr);
-        g_ngfx.new_sub_path(cr);
-        g_ngfx.arc(cr, cx + 1.5, cy, 9.2, -0.65, 0.65);
-        g_ngfx.stroke(cr);
-    }
-}
-
-static void draw_sun_glyph(cairo_t *cr, double cx, double cy, double r, double g, double b, double a) {
-    ngfx_fill_circle(cr, cx, cy, 3.8, r, g, b, a);
-    g_ngfx.set_source_rgba(cr, r, g, b, a);
-    g_ngfx.set_line_width(cr, 1.3);
-    for (int k = 0; k < 8; ++k) {
-        double ang = k * (3.14159265 / 4.0);
-        g_ngfx.move_to(cr, cx + cos(ang) * 5.2, cy + sin(ang) * 5.2);
-        g_ngfx.line_to(cr, cx + cos(ang) * 7.5, cy + sin(ang) * 7.5);
-    }
-    g_ngfx.stroke(cr);
-}
+/* --- Quick Settings Tile Helper (shared glyphs live in icons.c) --- */
 
 static void draw_qs_tile_bg(cairo_t *cr, int x, int y, int w, int h, int active, int hover,
                             double ar, double ag, double ab,
@@ -202,12 +149,14 @@ void render_quick_settings_popover(NatureOSState *st, cairo_t *cr, const NatureP
 
     /* Tile 1: Wi-Fi */
     int r1_y = row_y0;
+    int wifi_on = st->cfg.wifi_enabled && st->svc_network;
     int h_wifi = (st->hover_mx >= col0_x && st->hover_mx <= col0_x + t_w && st->hover_my >= r1_y && st->hover_my <= r1_y + tile_h);
-    draw_qs_tile_bg(cr, col0_x, r1_y, t_w, tile_h, st->cfg.wifi_enabled, h_wifi, ar, ag, ab, pal->ar_hi, pal->ag_hi, pal->ab_hi, pal);
-    ngfx_fill_circle(cr, col0_x + 21, r1_y + 22, 13.5, st->cfg.wifi_enabled ? 1.0 : pal->card_r, st->cfg.wifi_enabled ? 1.0 : pal->card_g, st->cfg.wifi_enabled ? 1.0 : pal->card_b, st->cfg.wifi_enabled ? 0.22 : 0.90);
-    draw_wifi_glyph(cr, col0_x + 21, r1_y + 21, st->cfg.wifi_enabled ? 1.0 : fg_r, st->cfg.wifi_enabled ? 1.0 : fg_g, st->cfg.wifi_enabled ? 1.0 : fg_b, 0.96);
-    ngfx_text(cr, "Plus Jakarta Sans", 1, 11.4, col0_x + 41, r1_y + 19, st->cfg.wifi_enabled ? 1.0 : fg_r, st->cfg.wifi_enabled ? 1.0 : fg_g, st->cfg.wifi_enabled ? 1.0 : fg_b, 1.0, "Wi-Fi");
-    ngfx_text_clipped(cr, "Noto Sans", 0, 9.5, col0_x + 41, r1_y + 34, t_w - 50, st->cfg.wifi_enabled ? 0.92 : mut_r, st->cfg.wifi_enabled ? 0.97 : mut_g, st->cfg.wifi_enabled ? 0.94 : mut_b, 0.92, st->cfg.wifi_enabled ? "Canopy-5GHz" : "Off");
+    draw_qs_tile_bg(cr, col0_x, r1_y, t_w, tile_h, wifi_on, h_wifi, ar, ag, ab, pal->ar_hi, pal->ag_hi, pal->ab_hi, pal);
+    ngfx_fill_circle(cr, col0_x + 21, r1_y + 22, 13.5, wifi_on ? 1.0 : pal->card_r, wifi_on ? 1.0 : pal->card_g, wifi_on ? 1.0 : pal->card_b, wifi_on ? 0.22 : 0.90);
+    draw_wifi_glyph(cr, col0_x + 21, r1_y + 21, wifi_on ? 1.0 : fg_r, wifi_on ? 1.0 : fg_g, wifi_on ? 1.0 : fg_b, 0.96);
+    ngfx_text(cr, "Plus Jakarta Sans", 1, 11.4, col0_x + 41, r1_y + 19, wifi_on ? 1.0 : fg_r, wifi_on ? 1.0 : fg_g, wifi_on ? 1.0 : fg_b, 1.0, "Wi-Fi");
+    ngfx_text_clipped(cr, "Noto Sans", 0, 9.5, col0_x + 41, r1_y + 34, t_w - 50, wifi_on ? 0.92 : mut_r, wifi_on ? 0.97 : mut_g, wifi_on ? 0.94 : mut_b, 0.92,
+                      !st->svc_network ? "NM stopped" : (st->cfg.wifi_enabled ? "Canopy-5GHz" : "Off"));
     nature_add_hit(st, col0_x, r1_y, t_w, tile_h, HIT_QS_WIFI, 0, 0);
 
     /* Tile 2: Bluetooth */
@@ -288,10 +237,12 @@ void render_quick_settings_popover(NatureOSState *st, cairo_t *cr, const NatureP
     for (int m = 0; m < 3; ++m) {
         int act = (st->cfg.power_profile % 3) == m;
         int sx = seg_x + m * seg_w;
+        int m_hov = (st->hover_mx >= sx && st->hover_mx <= sx + seg_w && st->hover_my >= pa_y + 7 && st->hover_my <= pa_y + 31);
         if (act) ngfx_fill_gradient(cr, sx, pa_y + 9, seg_w - 1, 20, 6, ar, ag, ab, 0.95, pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.95, 1);
+        else if (m_hov) ngfx_fill_rect(cr, sx, pa_y + 9, seg_w - 1, 20, 6, pal->hover_r, pal->hover_g, pal->hover_b, 0.90);
         double mw = ngfx_text_width(cr, "Noto Sans", act, 9.8, pmodes[m]);
         ngfx_text(cr, "Noto Sans", act, 9.8, sx + ((seg_w - 1) - mw) * 0.5, pa_y + 22.5,
-                  act ? 1.0 : mut_r, act ? 1.0 : mut_g, act ? 1.0 : mut_b, 1.0, pmodes[m]);
+                  act ? 1.0 : (m_hov ? fg_r : mut_r), act ? 1.0 : (m_hov ? fg_g : mut_g), act ? 1.0 : (m_hov ? fg_b : mut_b), 1.0, pmodes[m]);
     }
     nature_add_hit(st, seg_x - 2, pa_y + 6, seg_w * 3 + 4, 26, HIT_QS_PERF, 0, 0);
 
@@ -305,9 +256,10 @@ void render_quick_settings_popover(NatureOSState *st, cairo_t *cr, const NatureP
         int cx = px + 84 + a * 30;
         int cy = pa_y + 53;
         int sel = (st->cfg.accent_idx % 6) == a;
-        if (sel) {
-            ngfx_fill_circle(cr, cx, cy, 11.2, sr, sg, sb, 0.28);
-            ngfx_stroke_rect(cr, cx - 10.0, cy - 10.0, 20, 20, 10, 1.5, fg_r, fg_g, fg_b, 0.90);
+        int ahov = (st->hover_mx >= cx - 12 && st->hover_mx <= cx + 12 && st->hover_my >= cy - 12 && st->hover_my <= cy + 12);
+        if (sel || ahov) {
+            ngfx_fill_circle(cr, cx, cy, 11.2, sr, sg, sb, sel ? 0.28 : 0.16);
+            if (sel) ngfx_stroke_rect(cr, cx - 10.0, cy - 10.0, 20, 20, 10, 1.5, fg_r, fg_g, fg_b, 0.90);
         }
         ngfx_fill_circle(cr, cx, cy, 7.6, sr, sg, sb, 1.0);
         nature_add_hit(st, cx - 13, cy - 13, 26, 26, HIT_QS_ACCENT, a, 0);
@@ -499,23 +451,26 @@ void render_calendar_popover(NatureOSState *st, cairo_t *cr, const NaturePalette
 
     /* Month navigation controls (< Today >) */
     int nav_x = px + pw - 114;
-    ngfx_fill_rect(cr, nav_x, py + 12, 24, 24, 8, pal->elev_r, pal->elev_g, pal->elev_b, 0.92);
-    ngfx_stroke_rect(cr, nav_x + 0.5, py + 12.5, 23, 23, 8, 0.8, pal->border_r, pal->border_g, pal->border_b, pal->border_a);
+    int h_prev = (st->hover_mx >= nav_x && st->hover_mx <= nav_x + 24 && st->hover_my >= py + 12 && st->hover_my <= py + 36);
+    ngfx_fill_rect(cr, nav_x, py + 12, 24, 24, 8, h_prev ? pal->hover_r : pal->elev_r, h_prev ? pal->hover_g : pal->elev_g, h_prev ? pal->hover_b : pal->elev_b, 0.95);
+    ngfx_stroke_rect(cr, nav_x + 0.5, py + 12.5, 23, 23, 8, 0.8, h_prev ? ar : pal->border_r, h_prev ? ag : pal->border_g, h_prev ? ab : pal->border_b, h_prev ? 0.72 : pal->border_a);
     ngfx_text(cr, "JetBrains Mono", 1, 10.5, nav_x + 8, py + 28, fg_r, fg_g, fg_b, 0.95, "<");
     nature_add_hit(st, nav_x, py + 12, 24, 24, HIT_CAL_MONTH_NAV, -1, 0);
 
+    int h_today = (st->hover_mx >= nav_x + 28 && st->hover_mx <= nav_x + 74 && st->hover_my >= py + 12 && st->hover_my <= py + 36);
     ngfx_fill_rect(cr, nav_x + 28, py + 12, 46, 24, 8,
-                   st->cal_month_offset == 0 ? ar : pal->elev_r,
-                   st->cal_month_offset == 0 ? ag : pal->elev_g,
-                   st->cal_month_offset == 0 ? ab : pal->elev_b, 0.94);
+                   st->cal_month_offset == 0 ? ar : (h_today ? pal->hover_r : pal->elev_r),
+                   st->cal_month_offset == 0 ? ag : (h_today ? pal->hover_g : pal->elev_g),
+                   st->cal_month_offset == 0 ? ab : (h_today ? pal->hover_b : pal->elev_b), 0.94);
     ngfx_text(cr, "Noto Sans", 1, 9.4, nav_x + 36, py + 27.5,
               st->cal_month_offset == 0 ? pal->on_acc_r : fg_r,
               st->cal_month_offset == 0 ? pal->on_acc_g : fg_g,
               st->cal_month_offset == 0 ? pal->on_acc_b : fg_b, 0.98, "Today");
     nature_add_hit(st, nav_x + 28, py + 12, 46, 24, HIT_CAL_MONTH_NAV, 0, 0);
 
-    ngfx_fill_rect(cr, nav_x + 78, py + 12, 24, 24, 8, pal->elev_r, pal->elev_g, pal->elev_b, 0.92);
-    ngfx_stroke_rect(cr, nav_x + 78.5, py + 12.5, 23, 23, 8, 0.8, pal->border_r, pal->border_g, pal->border_b, pal->border_a);
+    int h_next = (st->hover_mx >= nav_x + 78 && st->hover_mx <= nav_x + 102 && st->hover_my >= py + 12 && st->hover_my <= py + 36);
+    ngfx_fill_rect(cr, nav_x + 78, py + 12, 24, 24, 8, h_next ? pal->hover_r : pal->elev_r, h_next ? pal->hover_g : pal->elev_g, h_next ? pal->hover_b : pal->elev_b, 0.95);
+    ngfx_stroke_rect(cr, nav_x + 78.5, py + 12.5, 23, 23, 8, 0.8, h_next ? ar : pal->border_r, h_next ? ag : pal->border_g, h_next ? ab : pal->border_b, h_next ? 0.72 : pal->border_a);
     ngfx_text(cr, "JetBrains Mono", 1, 10.5, nav_x + 86, py + 28, fg_r, fg_g, fg_b, 0.95, ">");
     nature_add_hit(st, nav_x + 78, py + 12, 24, 24, HIT_CAL_MONTH_NAV, 1, 0);
 
@@ -691,10 +646,10 @@ void render_launcher_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette
     g_ngfx.stroke(cr);
 
     if (st->launcher_query[0]) {
-        ngfx_text(cr, "Plus Jakarta Sans", 1, 13.0, sx + 40, sy + 24.5, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, st->launcher_query);
+        ngfx_text_clipped(cr, "Plus Jakarta Sans", 1, 13.0, sx + 40, sy + 24.5, s_w - 60, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, st->launcher_query);
     } else {
-        ngfx_text(cr, "Noto Sans", 0, 12.2, sx + 40, sy + 24.5, pal->mut_r, pal->mut_g, pal->mut_b, 0.92,
-                  "Type to search apps & tools...");
+        ngfx_text_clipped(cr, "Noto Sans", 0, 12.2, sx + 40, sy + 24.5, s_w - 60, pal->mut_r, pal->mut_g, pal->mut_b, 0.92,
+                          "Spotlight search: apps, files, settings or commands...");
     }
     nature_add_hit(st, sx, sy, s_w, s_h, HIT_LAUNCHER_SEARCH, 0, 0);
     nature_add_text_rect(st, sx, sy, s_w, s_h, 2);
@@ -732,12 +687,73 @@ void render_launcher_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette
     int lw = sw < 760 ? sw - 24 : 748;
     int ly = thumb_y + (open_count > 0 && !st->launcher_query[0] && sw >= 580 ? 102 : 14);
     int lh = sh - ly - 80;
-    if (lh > 326) lh = 326;
+    if (lh > 338) lh = 338;
     int lx = (sw - lw) / 2;
     ngfx_shadow_rect(cr, lx, ly, lw, lh, 18, 4.5, dark ? 0.55 : 0.24);
     ngfx_fill_gradient(cr, lx, ly, lw, lh, 18, pal->card_r, pal->card_g, pal->card_b, 0.98, pal->win_bg_r, pal->win_bg_g, pal->win_bg_b, 0.98, 0);
     ngfx_stroke_rect(cr, lx + 0.5, ly + 0.5, lw - 1, lh - 1, 18, 1.0, pal->strong_brd_r, pal->strong_brd_g, pal->strong_brd_b, pal->strong_brd_a);
     ngfx_top_specular(cr, lx, ly, lw, 18, dark ? 0.25 : 0.72);
+
+    if (st->launcher_query[0]) {
+        SpotlightItem items[7];
+        int n_res = wm_collect_spotlight(st, items, 7);
+        ngfx_text(cr, "Plus Jakarta Sans", 1, 13.8, lx + 24, ly + 30, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, "Spotlight Results");
+        char rcnt[32];
+        snprintf(rcnt, sizeof(rcnt), "%d match%s", n_res, n_res == 1 ? "" : "es");
+        ngfx_text(cr, "JetBrains Mono", 0, 9.8, lx + lw - 96, ly + 29, pal->mut_r, pal->mut_g, pal->mut_b, 0.88, rcnt);
+
+        if (n_res == 0) {
+            char empty_l[96];
+            snprintf(empty_l, sizeof(empty_l), "No apps, files, settings or commands matching \"%.30s\"", st->launcher_query);
+            double ew = ngfx_text_width(cr, "Noto Sans", 0, 11.8, empty_l);
+            ngfx_text_clipped(cr, "Noto Sans", 0, 11.8, lx + (lw - ew > 40 ? (lw - ew) * 0.5 : 24), ly + lh * 0.52, lw - 48,
+                              pal->mut_r, pal->mut_g, pal->mut_b, 0.88, empty_l);
+        } else {
+            int ry = ly + 44;
+            int row_h = 37;
+            int cur_sel = st->launcher_sel % n_res;
+            if (cur_sel < 0) cur_sel += n_res;
+            for (int r = 0; r < n_res; ++r) {
+                if (ry + row_h > ly + lh - 22) break;
+                const SpotlightItem *it = &items[r];
+                int rhov = (st->hover_mx >= lx + 18 && st->hover_mx <= lx + lw - 18 && st->hover_my >= ry && st->hover_my <= ry + row_h - 3);
+                int ract = (r == cur_sel || rhov);
+                ngfx_fill_rect(cr, lx + 18, ry, lw - 36, row_h - 3, 10,
+                               ract ? ar : pal->elev_r, ract ? ag : pal->elev_g, ract ? ab : pal->elev_b,
+                               r == cur_sel ? 0.22 : (rhov ? 0.14 : 0.58));
+                ngfx_stroke_rect(cr, lx + 18.5, ry + 0.5, lw - 37, row_h - 4, 10, r == cur_sel ? 1.2 : 0.8,
+                                 ract ? ar : pal->border_r, ract ? ag : pal->border_g, ract ? ab : pal->border_b,
+                                 r == cur_sel ? 0.85 : pal->border_a);
+
+                if (it->kind == 0) {
+                    draw_app_icon(cr, (AppType)it->arg0, lx + 28, ry + 5, 24);
+                } else {
+                    ngfx_fill_rect(cr, lx + 28, ry + 6, 24, 22, 6, ar, ag, ab, 0.20);
+                    ngfx_text(cr, "JetBrains Mono", 1, 9.2, lx + 34, ry + 20.5, pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.96,
+                              it->kind == 1 ? "FS" : (it->kind == 2 ? "CF" : ">_"));
+                }
+
+                ngfx_text_clipped(cr, "Plus Jakarta Sans", 1, 11.4, lx + 62, ry + 16, lw - 186, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, it->title);
+                ngfx_text_clipped(cr, "Noto Sans", 0, 9.4, lx + 62, ry + 29, lw - 186, pal->mut_r, pal->mut_g, pal->mut_b, 0.90, it->subtitle);
+
+                ngfx_fill_rect(cr, lx + lw - 92, ry + 8, 62, 18, 6, pal->card_r, pal->card_g, pal->card_b, 0.88);
+                double tw_tag = ngfx_text_width(cr, "JetBrains Mono", 1, 8.6, it->tag);
+                ngfx_text(cr, "JetBrains Mono", 1, 8.6, lx + lw - 92 + (62 - tw_tag) * 0.5, ry + 20,
+                          pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.98, it->tag);
+
+                int act_hit = HIT_LAUNCHER_APP;
+                if (it->kind == 1) act_hit = HIT_LAUNCHER_FILE;
+                else if (it->kind == 2) act_hit = HIT_LAUNCHER_SETTING;
+                else if (it->kind == 3) act_hit = HIT_LAUNCHER_ACTION;
+                nature_add_hit(st, lx + 18, ry, lw - 36, row_h - 3, act_hit, it->arg0, 0);
+                ry += row_h;
+            }
+        }
+        if (lw >= 440) {
+            ngfx_text(cr, "JetBrains Mono", 0, 9.0, lx + lw - 190, ly + lh - 10, pal->mut_r, pal->mut_g, pal->mut_b, 0.72, "Up/Down · Enter run · Esc");
+        }
+        return;
+    }
 
     ngfx_text(cr, "Plus Jakarta Sans", 1, 13.8, lx + 24, ly + 30, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, "Applications");
 
@@ -764,7 +780,6 @@ void render_launcher_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette
     int shown = 0;
     for (int i = 0; i < APP_COUNT; ++i) {
         if (!app_matches_launcher_cat((AppType)i, st->launcher_cat)) continue;
-        if (!str_contains_ci(APP_NAMES[i], st->launcher_query)) continue;
         int col = shown % cols;
         int row = shown / cols;
         int ax = lx + 24 + col * (cell_w + 14);
@@ -787,18 +802,113 @@ void render_launcher_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette
         nature_add_hit(st, ax, ay, cell_w, cell_h, HIT_LAUNCHER_APP, i, 0);
         shown++;
     }
-    if (shown == 0) {
-        char empty_l[96];
-        snprintf(empty_l, sizeof(empty_l), "No applications matching \"%.32s\"", st->launcher_query);
-        double ew = ngfx_text_width(cr, "Noto Sans", 0, 12.2, empty_l);
-        ngfx_text(cr, "Noto Sans", 0, 12.2, lx + (lw - ew) * 0.5, ly + lh * 0.52, pal->mut_r, pal->mut_g, pal->mut_b, 0.88, empty_l);
-    }
     if (lw >= 440) {
         ngfx_text(cr, "JetBrains Mono", 0, 9.2, lx + lw - 122, ly + lh - 12, pal->mut_r, pal->mut_g, pal->mut_b, 0.68, "Enter launch · Esc");
     }
 }
 
-/* --- Dedicated Window Overview Mode --- */
+/* --- Dedicated Window Overview Mode with Live Previews & Workspace Filter --- */
+
+static void draw_overview_mini_preview(const NatureOSState *st, cairo_t *cr, const OSWindow *w,
+                                       int x, int y, int pw, int ph, const NaturePalette *pal) {
+    double ar = pal->ar, ag = pal->ag, ab = pal->ab;
+    g_ngfx.save(cr);
+    ngfx_rounded_path(cr, x, y, pw, ph, 4);
+    g_ngfx.clip(cr);
+
+    if (w->app == APP_MONITOR) {
+        /* Live mini CPU telemetry curve + RAM bar */
+        g_ngfx.set_source_rgba(cr, pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.92);
+        g_ngfx.set_line_width(cr, 1.3);
+        int n = 24;
+        for (int i = 0; i < n; ++i) {
+            int idx = (48 - n) + i;
+            double v = st->cpu_history[idx];
+            if (v > 100.0) v = 100.0;
+            if (v < 0.0) v = 0.0;
+            double sx = x + 6 + ((pw - 12) * i) / (double)(n - 1);
+            double sy = y + ph - 9 - (v / 100.0) * (ph - 13);
+            if (i == 0) g_ngfx.move_to(cr, sx, sy);
+            else g_ngfx.line_to(cr, sx, sy);
+        }
+        g_ngfx.stroke(cr);
+        double mem_f = st->total_ram_mb > 0 ? (double)st->used_ram_mb / (double)st->total_ram_mb : 0.3;
+        if (mem_f > 1.0) mem_f = 1.0;
+        ngfx_fill_rect(cr, x + 6, y + ph - 6, pw - 12, 3, 1.5, pal->elev_r, pal->elev_g, pal->elev_b, 0.8);
+        ngfx_fill_rect(cr, x + 6, y + ph - 6, (pw - 12) * mem_f, 3, 1.5, pal->success_r, pal->success_g, pal->success_b, 0.9);
+    } else if (w->app == APP_TERMINAL) {
+        int start = st->term_line_count > 3 ? st->term_line_count - 3 : 0;
+        int ly = y + 10;
+        for (int i = start; i < st->term_line_count && ly < y + ph - 2; ++i) {
+            uint8_t c = st->term_line_colors[i];
+            ngfx_text_clipped(cr, "JetBrains Mono", 0, 7.2, x + 6, ly, pw - 12,
+                              c == 2 ? pal->ar_hi : pal->fg_sec_r,
+                              c == 2 ? pal->ag_hi : pal->fg_sec_g,
+                              c == 2 ? pal->ab_hi : pal->fg_sec_b, 0.90, st->term_lines[i]);
+            ly += 9;
+        }
+    } else if (w->app == APP_MEDIA) {
+        if (st->media_mode == 0 && st->media_images[st->media_selected % MAX_MEDIA_IMAGES]) {
+            cairo_surface_t *img = st->media_images[st->media_selected % MAX_MEDIA_IMAGES];
+            double iw = g_ngfx.image_surface_get_width(img);
+            double ih = g_ngfx.image_surface_get_height(img);
+            if (iw > 0 && ih > 0) {
+                double sc = fmax((double)pw / iw, (double)ph / ih);
+                g_ngfx.translate(cr, x + (pw - iw * sc) * 0.5, y + (ph - ih * sc) * 0.5);
+                g_ngfx.scale(cr, sc, sc);
+                g_ngfx.set_source_surface(cr, img, 0, 0);
+                g_ngfx.paint(cr);
+            }
+        } else if (st->media_mode == 1) {
+            static const int vthumbs[MAX_VIDEO_CLIPS] = {6, 1, 9, 4};
+            int ti = vthumbs[st->video_selected % MAX_VIDEO_CLIPS];
+            cairo_surface_t *img = st->media_images[ti];
+            if (img) {
+                double iw = g_ngfx.image_surface_get_width(img);
+                double ih = g_ngfx.image_surface_get_height(img);
+                if (iw > 0 && ih > 0) {
+                    double sc = fmax((double)pw / iw, (double)ph / ih);
+                    g_ngfx.save(cr);
+                    g_ngfx.translate(cr, x + (pw - iw * sc) * 0.5, y + (ph - ih * sc) * 0.5);
+                    g_ngfx.scale(cr, sc, sc);
+                    g_ngfx.set_source_surface(cr, img, 0, 0);
+                    g_ngfx.paint(cr);
+                    g_ngfx.restore(cr);
+                }
+            }
+            ngfx_fill_rect(cr, x, y, pw, ph, 0, 0.04, 0.06, 0.08, 0.34);
+            ngfx_fill_circle(cr, x + pw * 0.5, y + ph * 0.5, 9.0, ar, ag, ab, 0.92);
+            double prog = (double)(st->video_progress_ms % 32000) / 32000.0;
+            ngfx_fill_rect(cr, x + 6, y + ph - 5, (pw - 12) * prog, 2.5, 1.2, pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.96);
+        } else {
+            for (int b = 0; b < 14; ++b) {
+                double bh = 6 + 18 * fabs(sin(b * 0.8 + st->audio_progress_sec));
+                ngfx_fill_rect(cr, x + 10 + b * ((pw - 20) / 14.0), y + ph - 5 - bh, 4, bh, 2, pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.88);
+            }
+        }
+    } else if (w->app == APP_FILES) {
+        ngfx_fill_rect(cr, x, y, 32, ph, 0, pal->card_r, pal->card_g, pal->card_b, 0.65);
+        for (int b = 0; b < 3; ++b) {
+            ngfx_fill_rect(cr, x + 42 + b * 36, y + 6, 28, 22, 4, ar, ag, ab, 0.28);
+            ngfx_fill_rect(cr, x + 46 + b * 36, y + 11, 14, 10, 2, pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.85);
+        }
+    } else if (w->app == APP_BROWSER) {
+        ngfx_fill_rect(cr, x + 6, y + 4, pw - 12, 8, 3, pal->card_r, pal->card_g, pal->card_b, 0.90);
+        ngfx_fill_gradient(cr, x + 6, y + 15, pw - 12, ph - 19, 4, ar, ag, ab, 0.42, pal->ar_hi, pal->ag_hi, pal->ab_hi, 0.16, 0);
+    } else if (w->app == APP_SETTINGS) {
+        ngfx_fill_rect(cr, x, y, 36, ph, 0, pal->card_r, pal->card_g, pal->card_b, 0.65);
+        for (int a = 0; a < 4; ++a) {
+            double sr, sg, sb;
+            nature_get_accent_ex(st->cfg.theme_family, a, pal->dark_mode, &sr, &sg, &sb);
+            ngfx_fill_circle(cr, x + 52 + a * 18, y + ph * 0.5, 5.5, sr, sg, sb, 0.95);
+        }
+    } else {
+        ngfx_fill_gradient(cr, x + 6, y + 4, pw - 12, 14, 4, 0.91, 0.33, 0.13, 0.78, ar, ag, ab, 0.65, 1);
+        ngfx_fill_rect(cr, x + 6, y + 21, (pw - 18) / 2, 12, 3, pal->card_r, pal->card_g, pal->card_b, 0.88);
+        ngfx_fill_rect(cr, x + 12 + (pw - 18) / 2, y + 21, (pw - 18) / 2, 12, 3, pal->card_r, pal->card_g, pal->card_b, 0.88);
+    }
+    g_ngfx.restore(cr);
+}
 
 void render_overview_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette *pal) {
     int sw = st->screen_w;
@@ -810,38 +920,60 @@ void render_overview_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette
     ngfx_fill_rect(cr, 0, 0, sw, sh, 0, pal->sidebar_r, pal->sidebar_g, pal->sidebar_b, dark ? 0.88 : 0.78);
     ngfx_radial_glow(cr, sw * 0.5, sh * 0.4, 24.0, sw * 0.5, ar, ag, ab, 0.14, 0.0);
 
-    int hdr_w = sw < 700 ? sw - 24 : 680;
+    int hdr_w = sw < 760 ? sw - 24 : 740;
     int hx = (sw - hdr_w) / 2, hy = 52;
     ngfx_fill_rect(cr, hx, hy, hdr_w, 44, 14, pal->card_r, pal->card_g, pal->card_b, 0.96);
     ngfx_stroke_rect(cr, hx + 0.5, hy + 0.5, hdr_w - 1, 43, 14, 1.0, pal->strong_brd_r, pal->strong_brd_g, pal->strong_brd_b, pal->strong_brd_a);
-    ngfx_text(cr, "Plus Jakarta Sans", 1, 14.0, hx + 16, hy + 27, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, "Window Overview");
+    ngfx_text(cr, "Plus Jakarta Sans", 1, 13.6, hx + 14, hy + 27, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, "Overview");
+
+    /* Workspace filter pills: All | WS1 | WS2 */
+    const char *f_lbls[3] = {"All", "WS1", "WS2"};
+    int fx = hx + 96;
+    for (int f = 0; f < 3 && hdr_w >= 460; ++f) {
+        int fw = 36;
+        int act = (st->overview_ws_filter == f);
+        ngfx_fill_rect(cr, fx, hy + 10, fw, 24, 8,
+                       act ? ar : pal->elev_r, act ? ag : pal->elev_g, act ? ab : pal->elev_b, act ? 0.92 : 0.84);
+        ngfx_text(cr, "JetBrains Mono", 1, 9.2, fx + (fw - ngfx_text_width(cr, "JetBrains Mono", 1, 9.2, f_lbls[f])) * 0.5,
+                  hy + 25.5, act ? pal->on_acc_r : pal->fg_sec_r, act ? pal->on_acc_g : pal->fg_sec_g, act ? pal->on_acc_b : pal->fg_sec_b, 0.98, f_lbls[f]);
+        nature_add_hit(st, fx, hy + 10, fw, 24, HIT_OVERVIEW_FILTER, f, 0);
+        fx += fw + 5;
+    }
 
     /* Show Desktop, Tile & Exit buttons */
-    int ex_x = hx + hdr_w - 82;
-    ngfx_fill_rect(cr, ex_x, hy + 9, 70, 26, 8, ar, ag, ab, 0.90);
-    ngfx_text(cr, "Noto Sans", 1, 10.6, ex_x + 20, hy + 26, 1, 1, 1, 1, "Done");
-    nature_add_hit(st, ex_x, hy + 9, 70, 26, HIT_OVERVIEW_EXIT, 0, 0);
+    int ex_x = hx + hdr_w - 78;
+    ngfx_fill_rect(cr, ex_x, hy + 9, 68, 26, 8, ar, ag, ab, 0.90);
+    ngfx_text(cr, "Noto Sans", 1, 10.6, ex_x + 19, hy + 26, 1, 1, 1, 1, "Done");
+    nature_add_hit(st, ex_x, hy + 9, 68, 26, HIT_OVERVIEW_EXIT, 0, 0);
 
-    int tl_x = ex_x - 84;
+    int tl_x = ex_x - 82;
     ngfx_fill_rect(cr, tl_x, hy + 9, 76, 26, 8, pal->elev_r, pal->elev_g, pal->elev_b, 0.92);
     ngfx_stroke_rect(cr, tl_x + 0.5, hy + 9.5, 75, 25, 8, 0.8, pal->border_r, pal->border_g, pal->border_b, pal->border_a);
     ngfx_text(cr, "Noto Sans", 1, 10.4, tl_x + 11, hy + 26, pal->fg_r, pal->fg_g, pal->fg_b, 0.95, "Tile Grid");
     nature_add_hit(st, tl_x, hy + 9, 76, 26, HIT_QS_TILE, 0, 0);
 
-    if (hdr_w >= 430) {
-        int sd_x = tl_x - 108;
+    if (hdr_w >= 500) {
+        int sd_x = tl_x - 106;
         ngfx_fill_rect(cr, sd_x, hy + 9, 100, 26, 8, pal->elev_r, pal->elev_g, pal->elev_b, 0.92);
         ngfx_stroke_rect(cr, sd_x + 0.5, hy + 9.5, 99, 25, 8, 0.8, pal->border_r, pal->border_g, pal->border_b, pal->border_a);
         ngfx_text(cr, "Noto Sans", 1, 10.2, sd_x + 11, hy + 26, pal->fg_r, pal->fg_g, pal->fg_b, 0.95, "Show Desktop");
         nature_add_hit(st, sd_x, hy + 9, 100, 26, HIT_OVERVIEW_SHOW_DESKTOP, 0, 0);
 
-        if (st->window_count > 0 && hdr_w >= 540) {
-            int ca_x = sd_x - 86;
+        if (st->window_count > 0 && hdr_w >= 620) {
+            int ca_x = sd_x - 84;
             ngfx_fill_rect(cr, ca_x, hy + 9, 78, 26, 8, pal->danger_r, pal->danger_g, pal->danger_b, 0.20);
             ngfx_stroke_rect(cr, ca_x + 0.5, hy + 9.5, 77, 25, 8, 0.8, pal->danger_r, pal->danger_g, pal->danger_b, 0.45);
             ngfx_text(cr, "Noto Sans", 1, 10.2, ca_x + 13, hy + 26, pal->danger_r, pal->danger_g, pal->danger_b, 0.98, "Close All");
             nature_add_hit(st, ca_x, hy + 9, 78, 26, HIT_OVERVIEW_CLOSE_ALL, 0, 0);
         }
+    }
+
+    int ov_idx[MAX_WINDOWS];
+    int ov_cnt = 0;
+    for (int i = 0; i < st->window_count; ++i) {
+        if (st->overview_ws_filter == 1 && st->windows[i].workspace != 0) continue;
+        if (st->overview_ws_filter == 2 && st->windows[i].workspace != 1) continue;
+        ov_idx[ov_cnt++] = i;
     }
 
     int cols = sw >= 900 ? 3 : (sw >= 560 ? 2 : 1);
@@ -852,13 +984,24 @@ void render_overview_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette
     int gx0 = (sw - grid_w) / 2;
     int gy0 = hy + 64;
 
-    if (st->window_count == 0) {
-        ngfx_text(cr, "Noto Sans", 0, 13.0, (sw - 190) * 0.5, gy0 + 80, pal->mut_r, pal->mut_g, pal->mut_b, 0.9, "No open windows across workspaces");
+    int total_rows = (ov_cnt + cols - 1) / cols;
+    int vis_rows = (sh - 82 - gy0 + 18) / (ch + 18);
+    if (vis_rows < 1) vis_rows = 1;
+    int max_sc = total_rows - vis_rows;
+    if (max_sc < 0) max_sc = 0;
+    if (st->overview_scroll > max_sc) st->overview_scroll = max_sc;
+    if (st->overview_scroll < 0) st->overview_scroll = 0;
+
+    if (ov_cnt == 0) {
+        ngfx_text(cr, "Noto Sans", 0, 13.0, (sw - 210) * 0.5, gy0 + 80, pal->mut_r, pal->mut_g, pal->mut_b, 0.9,
+                  st->window_count == 0 ? "No open windows across workspaces" : "No windows on this workspace");
     } else {
-        for (int i = 0; i < st->window_count; ++i) {
-            OSWindow *w = &st->windows[i];
-            int col = i % cols;
-            int row = i / cols;
+        int start_i = st->overview_scroll * cols;
+        for (int k = start_i; k < ov_cnt; ++k) {
+            OSWindow *w = &st->windows[ov_idx[k]];
+            int slot = k - start_i;
+            int col = slot % cols;
+            int row = slot / cols;
             int cx = gx0 + col * (cw + 18);
             int cy = gy0 + row * (ch + 18);
             if (cy + ch > sh - 82) break;
@@ -883,6 +1026,7 @@ void render_overview_overlay(NatureOSState *st, cairo_t *cr, const NaturePalette
             ngfx_fill_circle(cr, px_m + 9, py_m + 5.5, 2.0, 0.98, 0.37, 0.34, 0.9);
             ngfx_fill_circle(cr, px_m + 16, py_m + 5.5, 2.0, 0.98, 0.74, 0.18, 0.9);
             ngfx_fill_circle(cr, px_m + 23, py_m + 5.5, 2.0, 0.18, 0.79, 0.32, 0.9);
+            draw_overview_mini_preview(st, cr, w, px_m + 2, py_m + 12, pw_m - 4, ph_m - 14, pal);
 
             nature_add_hit(st, cx, cy, cw, ch - 38, HIT_OVERVIEW_WIN, w->id, 0);
 
@@ -1118,20 +1262,21 @@ void render_alt_tab_hud(NatureOSState *st, cairo_t *cr, const NaturePalette *pal
     int dark = pal->dark_mode;
     double ar = pal->ar, ag = pal->ag, ab = pal->ab;
 
-    /* Light modal scrim */
+    /* Light modal scrim (click outside dismisses HUD) */
     ntheme_draw_modal_scrim(cr, sw, sh, dark ? 0.65 : 0.38);
+    nature_add_hit(st, 0, 0, sw, sh, HIT_ALT_TAB_SELECT, -1, 0);
 
-    if (st->window_count == 0) {
+    int win_idxs[MAX_WINDOWS];
+    int n_win = wm_collect_alt_tab_wins(st, win_idxs);
+    if (n_win == 0) {
         int pw = 240, ph = 64;
         int px = (sw - pw) / 2, py = (sh - ph) / 2;
         ngfx_fill_rect(cr, px, py, pw, ph, 14, pal->card_r, pal->card_g, pal->card_b, 0.96);
         ngfx_stroke_rect(cr, px + 0.5, py + 0.5, pw - 1, ph - 1, 14, 1.0, pal->border_r, pal->border_g, pal->border_b, pal->border_a);
         ngfx_text(cr, "Noto Sans", 0, 11.5, px + 36, py + 37, pal->mut_r, pal->mut_g, pal->mut_b, 0.95, "No open windows to switch");
-        nature_add_hit(st, 0, 0, sw, sh, HIT_ALT_TAB_SELECT, -1, 0);
         return;
     }
 
-    int n_win = st->window_count;
     int tile_w = 126, tile_h = 104, gap = 12;
     int max_visible = (sw - 80) / (tile_w + gap);
     if (max_visible < 1) max_visible = 1;
@@ -1153,15 +1298,19 @@ void render_alt_tab_hud(NatureOSState *st, cairo_t *cr, const NaturePalette *pal
 
     /* HUD Header */
     ngfx_text(cr, "Plus Jakarta Sans", 1, 12.8, hud_x + 22, hud_y + 26, pal->fg_r, pal->fg_g, pal->fg_b, 1.0, "Switch Application");
-    ngfx_text(cr, "JetBrains Mono", 0, 9.4, hud_x + hud_w - 220, hud_y + 26, pal->mut_r, pal->mut_g, pal->mut_b, 0.88, "Tab to cycle · Click to select");
+    if (hud_w >= 340) {
+        ngfx_text(cr, "JetBrains Mono", 0, 9.4, hud_x + hud_w - 220, hud_y + 26, pal->mut_r, pal->mut_g, pal->mut_b, 0.88, "Tab to cycle · Click to select");
+    }
 
-    /* Render window tiles */
+    /* Render window tiles in synced Alt-Tab order */
     int start_x = hud_x + 20;
     int tile_y = hud_y + 42;
+    int cur_sel = st->alt_tab_selected % n_win;
+    if (cur_sel < 0) cur_sel += n_win;
     for (int i = 0; i < show_cnt; ++i) {
-        OSWindow *w = &st->windows[i];
+        OSWindow *w = &st->windows[win_idxs[i]];
         int tx = start_x + i * (tile_w + gap);
-        int is_sel = (i == (st->alt_tab_selected % n_win));
+        int is_sel = (i == cur_sel);
         int hov = (st->hover_mx >= tx && st->hover_mx <= tx + tile_w && st->hover_my >= tile_y && st->hover_my <= tile_y + tile_h);
 
         if (is_sel) {

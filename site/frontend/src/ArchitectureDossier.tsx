@@ -167,7 +167,7 @@ export function ArchitectureDossier({onOpenSourceFile}: ArchitectureDossierProps
               },
               {
                 title: 'shell.c',
-                desc: 'Activities overview, botanical dock, quick settings popover & window manager.',
+                desc: 'Modular shell & desktop UI, Spotlight overlays, window manager, vector icons & persistence.',
                 path: 'shell/src/shell.c',
                 lang: 'C17',
               },

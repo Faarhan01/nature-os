@@ -133,6 +133,10 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
     }
   }, []);
 
+  const focusCanvas = useCallback(() => {
+    canvasRef.current?.focus({preventScroll: true});
+  }, []);
+
   const enterFullscreen = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -142,6 +146,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
       if (document.fullscreenElement) {
         document.exitFullscreen?.().catch(() => {});
       }
+      requestAnimationFrame(focusCanvas);
       return;
     }
 
@@ -149,14 +154,17 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
       el.requestFullscreen()
         .then(() => {
           setNativeFullscreen(true);
+          requestAnimationFrame(focusCanvas);
         })
         .catch(() => {
           setPseudoFullscreen(true);
+          requestAnimationFrame(focusCanvas);
         });
     } else {
       setPseudoFullscreen(true);
+      requestAnimationFrame(focusCanvas);
     }
-  }, [nativeFullscreen, pseudoFullscreen]);
+  }, [nativeFullscreen, pseudoFullscreen, focusCanvas]);
 
   useImperativeHandle(ref, () => ({
     takeScreenshot: () => {
@@ -218,6 +226,22 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
   useEffect(() => {
     registerCommandSender?.(sendCommand);
   }, [registerCommandSender, sendCommand]);
+
+  useEffect(() => {
+    if (!visible || showMobileKeyboard) return;
+    const id = requestAnimationFrame(() => focusCanvas());
+    return () => cancelAnimationFrame(id);
+  }, [visible, hasFirstFrame, showMobileKeyboard, focusCanvas]);
+
+  useEffect(() => {
+    const onFocusReq = () => {
+      if (visible && !showMobileKeyboard) {
+        requestAnimationFrame(() => focusCanvas());
+      }
+    };
+    window.addEventListener('nature-focus-canvas', onFocusReq);
+    return () => window.removeEventListener('nature-focus-canvas', onFocusReq);
+  }, [visible, showMobileKeyboard, focusCanvas]);
 
   // Smooth adaptive viewport observer + Retina HiDPI resolution sync
   useEffect(() => {
@@ -293,6 +317,10 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
       const sizeChanged = fw > 0 && fh > 0 && (canvas.width !== fw || canvas.height !== fh);
 
       if (sizeChanged) {
+        canvas.width = fw;
+        canvas.height = fh;
+        osSizeRef.current = {w: fw, h: fh};
+        setOsDims({w: fw, h: fh});
         if (inflated && tileCount > 0) {
           if (!stagingCanvasRef.current) {
             stagingCanvasRef.current = document.createElement('canvas');
@@ -303,19 +331,10 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
             staging.height = fh;
           }
           paintTilesToCanvas(staging, inflated, tileCount);
-
-          canvas.width = fw;
-          canvas.height = fh;
           const ctx = canvas.getContext('2d', {alpha: false});
           ctx?.drawImage(staging, 0, 0);
-
-          osSizeRef.current = {w: fw, h: fh};
-          setOsDims({w: fw, h: fh});
         }
-        return;
-      }
-
-      if (inflated && tileCount > 0) {
+      } else if (inflated && tileCount > 0) {
         paintTilesToCanvas(canvas, inflated, tileCount);
       }
 
@@ -454,7 +473,9 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
     const canvas = canvasRef.current;
     if (!canvas) return {x: 0, y: 0};
     const rect = canvas.getBoundingClientRect();
-    const {w, h} = osSizeRef.current;
+    if (rect.width === 0 || rect.height === 0) return {x: 0, y: 0};
+    const w = canvas.width > 0 ? canvas.width : osSizeRef.current.w;
+    const h = canvas.height > 0 ? canvas.height : osSizeRef.current.h;
     const x = Math.max(0, Math.min(w - 1, Math.round(((clientX - rect.left) / rect.width) * w)));
     const y = Math.max(0, Math.min(h - 1, Math.round(((clientY - rect.top) / rect.height) * h)));
     return {x, y};
@@ -558,7 +579,9 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
 
     sendCommand(`U ${x} ${y}`);
 
-    if (wasTapTouch && settingsRef.current.keyboardMode === 'auto-touch') {
+    if (!t.isTouch) {
+      focusCanvas();
+    } else if (wasTapTouch && settingsRef.current.keyboardMode === 'auto-touch') {
       if (hitsTextRect(x, y) || hitsTextRect(tapX, tapY) || activeTargetRef.current > 0) {
         setShowMobileKeyboard(true);
         mobileInputRef.current?.focus({preventScroll: true});
@@ -590,18 +613,46 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
     if (e.key === 'Meta' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Shift') return;
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'l' || e.key === 'L' || e.key === 'u' || e.key === 'U')) {
+      e.preventDefault();
+      sendCommand(`K Ctrl+${e.key.toUpperCase()}`);
+      return;
+    }
+    if ((e.metaKey || e.altKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      const cmd = e.key === 'ArrowLeft' ? 'K SnapLeft' : e.key === 'ArrowRight' ? 'K SnapRight' : e.key === 'ArrowUp' ? 'K SnapUp' : 'K SnapDown';
+      sendCommand(cmd);
+      return;
+    }
+    if ((e.altKey || e.metaKey) && e.key === 'Tab') {
+      e.preventDefault();
+      sendCommand('K AltTab');
+      return;
+    }
     if (
       e.key === 'Backspace' ||
+      e.key === 'Delete' ||
       e.key === 'Enter' ||
       e.key === 'ArrowUp' ||
       e.key === 'ArrowDown' ||
       e.key === 'ArrowLeft' ||
       e.key === 'ArrowRight' ||
+      e.key === 'Home' ||
+      e.key === 'End' ||
+      e.key === 'PageUp' ||
+      e.key === 'PageDown' ||
+      e.key === 'F2' ||
+      e.key === 'F11' ||
       e.key === 'Tab' ||
       e.key === 'Escape'
     ) {
       e.preventDefault();
       sendCommand(`K ${e.key}`);
+      return;
+    }
+    if (e.key === ' ' || e.key === 'Spacebar' || e.code === 'Space') {
+      e.preventDefault();
+      sendCommand('K Space');
       return;
     }
     if (e.key.length === 1) {
@@ -617,7 +668,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
     if (next.startsWith(prev)) {
       const added = next.slice(prev.length);
       for (const ch of added) {
-        sendCommand(`K ${ch}`);
+        sendCommand(ch === ' ' ? 'K Space' : `K ${ch}`);
       }
     } else if (prev.startsWith(next)) {
       const delCount = prev.length - next.length;
@@ -633,7 +684,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
         sendCommand('K Backspace');
       }
       for (let i = common; i < next.length; i++) {
-        sendCommand(`K ${next[i]}`);
+        sendCommand(next[i] === ' ' ? 'K Space' : `K ${next[i]}`);
       }
     }
 
@@ -679,6 +730,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
     prevMobileValRef.current = '';
     setMobileText('');
     mobileInputRef.current?.blur();
+    requestAnimationFrame(focusCanvas);
   };
 
   // Compute exact fitted CSS box that preserves OS aspect ratio with smooth transitions on sudden resizes
@@ -717,7 +769,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
           onWheel={handleWheel}
           onContextMenu={handleContextMenu}
           onKeyDown={handleKeyDown}
-          style={{touchAction: 'none'}}
+          style={{touchAction: 'none', imageRendering: 'crisp-edges'}}
           className="h-full w-full cursor-default select-none outline-none"
         />
 
@@ -731,8 +783,11 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
         >
           <button
             type="button"
-            onClick={enterFullscreen}
-            className="flex items-center gap-1.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/20 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-black/90 transition-colors shadow-lg min-h-[34px]"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              enterFullscreen();
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/20 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-black/90 transition-colors shadow-lg min-h-[34px] whitespace-nowrap shrink-0"
             title={isOsFullscreen ? 'Exit Fullscreen' : 'Make OS Fullscreen'}
           >
             {isOsFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
@@ -810,7 +865,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
           </div>
           {showMobileKeyboard && (
             <div className="flex items-center gap-1 overflow-x-auto text-[11px] font-mono">
-              {(['Escape', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] as const).map((k) => (
+              {(['Escape', 'Tab', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] as const).map((k) => (
                 <button
                   key={k}
                   type="button"
@@ -822,15 +877,17 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
                 >
                   {k === 'Escape'
                     ? 'Esc'
-                    : k === 'ArrowLeft'
-                      ? '←'
-                      : k === 'ArrowRight'
-                        ? '→'
-                        : k === 'ArrowUp'
-                          ? '↑'
-                          : k === 'ArrowDown'
-                            ? '↓'
-                            : 'Tab'}
+                    : k === 'Space'
+                      ? 'Space'
+                      : k === 'ArrowLeft'
+                        ? '←'
+                        : k === 'ArrowRight'
+                          ? '→'
+                          : k === 'ArrowUp'
+                            ? '↑'
+                            : k === 'ArrowDown'
+                              ? '↓'
+                              : 'Tab'}
                 </button>
               ))}
               <button

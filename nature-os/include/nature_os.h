@@ -35,6 +35,11 @@ typedef struct {
     int wallpaper_idx;      /* 0..7 preset wallpapers, 8=custom from media */
     int accent_idx;         /* 0..5 */
     int dock_position;      /* 0=Bottom, 1=Left (Ubuntu style) */
+    int dock_size;          /* 0=Compact, 1=Standard, 2=Large */
+    int animations_enabled; /* 1=Smooth transitions, 0=Reduced motion */
+    int show_panel_stats;   /* 1=Show top bar live telemetry pill */
+    int telemetry_ms;       /* 250, 500, 1000 ms telemetry cadence */
+    int auto_lock_min;      /* 0=Never, 5, 15 minutes */
     int low_power_mode;
     int zram_enabled;
     int wifi_enabled;
@@ -52,6 +57,9 @@ typedef struct {
     int window_snap;        /* 1=Edge drag snap enabled */
     int show_desktop_widgets; /* 1=Ambient desktop clock & shortcut cards */
     int show_toast_popups;  /* 1=Show desktop notification popups */
+    int term_font_size;     /* 10..14 Terminal monospace font size */
+    int compact_chrome;     /* 0=Standard, 1=Compact window headers */
+    int show_dock_labels;   /* 1=Show hover tooltips & active badges on dock */
     char device_name[32];   /* Editable PC hostname */
 } OSConfig;
 
@@ -103,13 +111,14 @@ typedef struct {
 } OSWindow;
 
 #define MAX_WINDOWS 16
-#define MAX_VFS 96
-#define MAX_TERM_LINES 140
+#define MAX_VFS 128
+#define MAX_TERM_LINES 200
 #define MAX_HIT_RECTS 768
 #define MAX_TEXT_RECTS 12
-#define MAX_APT_PKGS 12
+#define MAX_APT_PKGS 16
 #define MAX_WALLPAPERS 8
 #define MAX_MEDIA_IMAGES 11
+#define MAX_VIDEO_CLIPS 4
 #define MAX_AUDIO_TRACKS 4
 
 typedef struct {
@@ -120,6 +129,7 @@ typedef struct {
     int size_bytes;
     int image_idx;          /* >= 0 for images */
     int audio_idx;          /* >= 0 for audio files */
+    int video_idx;          /* >= 0 for video files */
     char mime_tag[16];      /* DIR, IMG, AUD, VID, C, MD, CONF, DEB, ISO, LOG, TXT */
     char modified[24];
     char content[768];
@@ -171,7 +181,9 @@ typedef enum {
     SCROLL_STORE = 5,
     SCROLL_BROWSER = 6,
     SCROLL_MEDIA_AUDIO = 7,
-    SCROLL_MEDIA_GRID = 8
+    SCROLL_MEDIA_GRID = 8,
+    SCROLL_MEDIA_VIDEO = 9,
+    SCROLL_MEDIA_FOLDER = 10
 } ScrollTargetKind;
 
 typedef enum {
@@ -198,7 +210,10 @@ typedef enum {
     HIT_LAUNCHER_APP = 20,
     HIT_LAUNCHER_SEARCH = 21,
     HIT_LAUNCHER_CAT = 22,
+    HIT_LAUNCHER_FILE = 23,
+    HIT_LAUNCHER_SETTING = 24,
     HIT_DESKTOP_ICON = 25,
+    HIT_LAUNCHER_ACTION = 26,
     HIT_OVERVIEW_WIN = 30,
     HIT_OVERVIEW_CLOSE = 31,
     HIT_OVERVIEW_SWAP = 32,
@@ -208,6 +223,7 @@ typedef enum {
     HIT_TOAST_DISMISS = 36,
     HIT_OVERVIEW_CLOSE_ALL = 37,
     HIT_LOCK_UNLOCK = 38,
+    HIT_OVERVIEW_FILTER = 39,
 
     /* Quick Settings Popover Hits */
     HIT_QS_WIFI = 40,
@@ -271,6 +287,8 @@ typedef enum {
     HIT_FILES_EDIT_SAVE = 122,
     HIT_FILES_EDIT_CANCEL = 123,
     HIT_FILES_EDIT_BOX = 124,
+    HIT_FILES_RUN_TERM = 125,
+    HIT_FILES_OPEN_MEDIA = 126,
 
     /* Monitor Hits */
     HIT_MONITOR_TAB = 200,
@@ -318,6 +336,15 @@ typedef enum {
     HIT_SETTINGS_NET_TEST = 331,
     HIT_SETTINGS_SOUND_TEST = 332,
     HIT_SETTINGS_CLEAR_USER_DATA = 333,
+    HIT_SETTINGS_DOCK_SIZE = 334,
+    HIT_SETTINGS_ANIMATIONS = 335,
+    HIT_SETTINGS_PANEL_STATS = 336,
+    HIT_SETTINGS_TELEMETRY_MS = 337,
+    HIT_SETTINGS_AUTO_LOCK = 338,
+    HIT_SETTINGS_TERM_FONT = 339,
+    HIT_SETTINGS_COMPACT_CHROME = 340,
+    HIT_SETTINGS_SVC_TOGGLE = 341,
+    HIT_SETTINGS_DOCK_LABELS = 342,
 
     /* Store Hits */
     HIT_STORE_CAT = 400,
@@ -354,6 +381,22 @@ typedef enum {
     HIT_MEDIA_AUDIO_NEXT = 521,
     HIT_MEDIA_INFO_TOGGLE = 522,
     HIT_MEDIA_AUDIO_EQ = 523,
+    HIT_MEDIA_FILTER = 524,
+    HIT_MEDIA_VIDEO_PLAY = 525,
+    HIT_MEDIA_VIDEO_SELECT = 526,
+    HIT_MEDIA_VIDEO_SEEK = 527,
+    HIT_MEDIA_VIDEO_PREV = 528,
+    HIT_MEDIA_VIDEO_NEXT = 529,
+    HIT_MEDIA_VIDEO_STEP = 530,
+    HIT_MEDIA_VIDEO_SPEED = 531,
+    HIT_MEDIA_VIDEO_LOOP = 532,
+    HIT_MEDIA_VIDEO_MUTE = 533,
+    HIT_MEDIA_VIDEO_HUD = 534,
+    HIT_MEDIA_VIDEO_FIT = 535,
+    HIT_MEDIA_SIDEBAR_TOGGLE = 536,
+    HIT_MEDIA_FOLDER = 537,
+    HIT_MEDIA_OPEN_VFS = 538,
+    HIT_MEDIA_FOLDER_OPEN_FILES = 539,
 
     /* Browser Hits */
     HIT_BROWSER_TAB = 600,
@@ -367,7 +410,8 @@ typedef enum {
 
     /* Terminal Hits */
     HIT_TERM_CHIP = 700,
-    HIT_TERM_INPUT_AREA = 701
+    HIT_TERM_INPUT_AREA = 701,
+    HIT_TERM_FONT = 702
 } HitActionType;
 
 typedef struct {
@@ -384,7 +428,10 @@ typedef struct {
     int next_pid;
     int launcher_open;
     int launcher_cat;       /* 0=All, 1=System, 2=Internet, 3=Media, 4=Utilities */
+    int launcher_sel;       /* Selected Spotlight result index */
     int overview_open;
+    int overview_ws_filter; /* 0=All, 1=WS1, 2=WS2 */
+    int overview_scroll;
     int is_locked;
     int quick_settings_open;
     int calendar_open;
@@ -396,6 +443,7 @@ typedef struct {
     int hover_mx, hover_my;
     int hover_hit_action;
     int hover_hit_arg0;
+    int hover_hit_arg1;
 
     /* Titlebar double-click tracking */
     int64_t last_title_click_ms;
@@ -468,16 +516,20 @@ typedef struct {
 
     /* Terminal Emulator */
     char term_cwd[128];
-    char term_lines[MAX_TERM_LINES][128];
+    char term_prev_cwd[128];
+    char term_lines[MAX_TERM_LINES][160];
     uint8_t term_line_colors[MAX_TERM_LINES];
     int term_line_count;
-    char term_input[128];
-    char term_history[24][128];
+    char term_input[256];
+    char term_history[24][256];
     int term_hist_count;
     int term_hist_idx;
     int term_cursor_visible;
     int term_scroll;        /* 0=bottom, >0 lines scrolled back */
     int term_max_scroll;
+    char term_env_keys[8][24];
+    char term_env_vals[8][64];
+    int term_env_count;
 
     /* System Monitor & Real Linux Telemetry */
     int monitor_tab;
@@ -485,7 +537,7 @@ typedef struct {
     int monitor_sort;       /* 0=CPU, 1=Mem, 2=PID */
     double cpu_history[48];
     double ram_history[48];
-    double core_usage[4];   /* Live per-core usage from /proc/stat */
+    double core_usage[8];   /* Live per-core usage from /proc/stat */
     double measured_fps;
     double frame_ms;
     double compositor_cpu_pct;
@@ -496,6 +548,12 @@ typedef struct {
     int cached_ram_mb;
     int os_rss_mb;
     int zram_used_mb;
+    int swap_total_mb;
+    int swap_used_mb;
+    int cgroup_limited;
+    double load_avg[3];
+    double net_rx_kbps;
+    double net_tx_kbps;
     double total_cpu_pct;
     long disk_total_gb;
     long disk_avail_gb;
@@ -510,8 +568,8 @@ typedef struct {
     int monitor_scroll;
     int monitor_max_scroll;
 
-    /* Settings */
-    int settings_section;   /* 0..6 */
+    /* Settings & Services */
+    int settings_section;   /* 0..7 */
     int settings_update_checked;
     int settings_net_ping_ms; /* -1=untested, >=0 last check ms */
     int settings_scroll;
@@ -521,6 +579,9 @@ typedef struct {
     char settings_search[48];
     int settings_confirm_reset;
     int settings_confirm_factory;
+    int svc_pipewire;
+    int svc_network;
+    int svc_oomd;
     int session_restored;
     char state_file_path[256];
 
@@ -535,8 +596,13 @@ typedef struct {
     int store_sync_count;
     char store_query[48];
 
-    /* Media Viewer & Audio Player */
-    int media_mode;         /* 0=Photos, 1=Audio */
+    /* Media Viewer, Video & Audio Player */
+    int media_sidebar_open; /* 1=Left folder/library panel visible */
+    int media_folder_idx;   /* 0=All Media, 1=Pictures, 2=Videos, 3=Audio, >=4=VFS folder */
+    char media_vfs_dir[128];
+    int media_folder_scroll;
+    int media_folder_max_scroll;
+    int media_mode;         /* 0=Photos, 1=Videos, 2=Audio */
     int media_grid_mode;    /* 0=Stage, 1=Gallery Grid */
     int media_slideshow;    /* 0=Off, 1=Auto-advance */
     int media_slideshow_ticks;
@@ -544,8 +610,18 @@ typedef struct {
     int media_selected;
     int media_zoom_pct;
     int media_rotation;     /* 0, 90, 180, 270 */
+    int media_filter;       /* 0=Natural, 1=Vivid, 2=Noir, 3=Warm */
     int media_grid_scroll;
     int media_grid_max_scroll;
+    int video_selected;     /* 0..MAX_VIDEO_CLIPS-1 */
+    int video_playing;
+    int video_loop;
+    int video_hud;
+    int video_fit_fill;     /* 0=Contain 16:9, 1=Fill */
+    int video_speed_x10;    /* 5, 10, 15, 20 */
+    int video_progress_ms;
+    int video_scroll;
+    int video_max_scroll;
     int audio_selected;
     int audio_playing;
     int audio_loop;         /* 0=Queue next, 1=Loop current */

@@ -147,6 +147,16 @@ static void draw_file_glyph(cairo_t *cr, NatureOSState *st, const VfsNode *n,
         }
         g_ngfx.restore(cr);
         ngfx_stroke_rect(cr, x + 4, y + 2, w - 8, h - 4, 6, 1.0, 1, 1, 1, 0.20);
+        if (n->video_idx >= 0) {
+            double pcx = x + w * 0.5, pcy = y + h * 0.5;
+            ngfx_fill_circle(cr, pcx, pcy, 11.5, 0.03, 0.05, 0.08, 0.72);
+            g_ngfx.set_source_rgba(cr, 1.0, 1.0, 1.0, 0.96);
+            g_ngfx.move_to(cr, pcx - 3.2, pcy - 5.2);
+            g_ngfx.line_to(cr, pcx + 5.8, pcy);
+            g_ngfx.line_to(cr, pcx - 3.2, pcy + 5.2);
+            g_ngfx.close_path(cr);
+            g_ngfx.fill(cr);
+        }
         return;
     }
     if (n->is_dir) {
@@ -168,6 +178,9 @@ static void draw_file_glyph(cairo_t *cr, NatureOSState *st, const VfsNode *n,
     double br = 0.25, bg = 0.58, bb = 0.44;
     if (n->audio_idx >= 0) { br = 0.16; bg = 0.68; bb = 0.56; }
     else if (strcmp(n->mime_tag, "VID") == 0) { br = 0.72; bg = 0.34; bb = 0.78; }
+    else if (strcmp(n->mime_tag, "JS") == 0 || strcmp(n->mime_tag, "JSON") == 0) { br = 0.85; bg = 0.62; bb = 0.14; }
+    else if (strcmp(n->mime_tag, "PY") == 0) { br = 0.22; bg = 0.62; bb = 0.84; }
+    else if (strcmp(n->mime_tag, "MD") == 0) { br = 0.18; bg = 0.70; bb = 0.72; }
     else if (strcmp(n->mime_tag, "C") == 0 || strcmp(n->mime_tag, "CPP") == 0) { br = 0.22; bg = 0.54; bb = 0.90; }
     else if (strcmp(n->mime_tag, "DEB") == 0 || strcmp(n->mime_tag, "ISO") == 0) { br = 0.88; bg = 0.46; bb = 0.15; }
     else if (strcmp(n->mime_tag, "CONF") == 0 || strcmp(n->mime_tag, "LOG") == 0) { br = 0.62; bg = 0.44; bb = 0.84; }
@@ -406,13 +419,14 @@ void nature_files_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, in
 
     if (show_note) {
         int hx = compact ? (bx + bw - 224) : (bx + bw - 288);
+        int hhov = (st->hover_hit_action == HIT_FILES_HIDDEN_TOGGLE);
         ngfx_fill_rect(cr, hx, cy + 8, 28, 26, 7,
-                       st->files_show_hidden ? ar : pal.elev_r,
-                       st->files_show_hidden ? ag : pal.elev_g,
-                       st->files_show_hidden ? ab : pal.elev_b,
+                       st->files_show_hidden ? ar : (hhov ? pal.hover_r : pal.elev_r),
+                       st->files_show_hidden ? ag : (hhov ? pal.hover_g : pal.elev_g),
+                       st->files_show_hidden ? ab : (hhov ? pal.hover_b : pal.elev_b),
                        st->files_show_hidden ? 0.24 : 0.95);
-        if (st->files_show_hidden) {
-            ngfx_stroke_rect(cr, hx + 0.5, cy + 8.5, 27, 25, 7, 0.9, ar, ag, ab, 0.75);
+        if (st->files_show_hidden || hhov) {
+            ngfx_stroke_rect(cr, hx + 0.5, cy + 8.5, 27, 25, 7, 0.9, ar, ag, ab, st->files_show_hidden ? 0.75 : 0.45);
         }
         ngfx_text(cr, "JetBrains Mono", 1, 10.4, hx + 6, cy + 25,
                   st->files_show_hidden ? (dark ? pal.ar_hi : ar) : mut_r,
@@ -422,25 +436,35 @@ void nature_files_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, in
 
         if (!compact) {
             int sx = bx + bw - 252;
-            ngfx_fill_rect(cr, sx, cy + 8, 54, 26, 7, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
+            int shov = (st->hover_hit_action == HIT_FILES_SORT);
+            ngfx_fill_rect(cr, sx, cy + 8, 54, 26, 7,
+                           shov ? pal.hover_r : pal.elev_r, shov ? pal.hover_g : pal.elev_g, shov ? pal.hover_b : pal.elev_b, 0.95);
+            if (shov) ngfx_stroke_rect(cr, sx + 0.5, cy + 8.5, 53, 25, 7, 0.8, ar, ag, ab, 0.45);
             ngfx_text(cr, "Noto Sans", 1, 11.0, sx + 10, cy + 25, fg_r, fg_g, fg_b, 0.9,
                       st->files_sort_mode ? "Size" : "Name");
             nature_add_hit(st, sx, cy + 8, 54, 26, HIT_FILES_SORT, 0, 0);
         }
 
         int nfx2 = bx + bw - 190;
-        ngfx_fill_rect(cr, nfx2, cy + 8, 56, 26, 7, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
+        int nhov = (st->hover_hit_action == HIT_FILES_NEW_FILE);
+        ngfx_fill_rect(cr, nfx2, cy + 8, 56, 26, 7,
+                       nhov ? pal.hover_r : pal.elev_r, nhov ? pal.hover_g : pal.elev_g, nhov ? pal.hover_b : pal.elev_b, 0.95);
+        if (nhov) ngfx_stroke_rect(cr, nfx2 + 0.5, cy + 8.5, 55, 25, 7, 0.8, ar, ag, ab, 0.45);
         ngfx_text(cr, "Noto Sans", 1, 10.6, nfx2 + 7, cy + 25, fg_r, fg_g, fg_b, 0.95, "+ Note");
         nature_add_hit(st, nfx2, cy + 8, 56, 26, HIT_FILES_NEW_FILE, 0, 0);
     }
 
     int nfx = bx + bw - 128;
-    ngfx_fill_rect(cr, nfx, cy + 8, 68, 26, 7, ar, ag, ab, 0.94);
+    int ndhov = (st->hover_hit_action == HIT_FILES_NEW_DIR);
+    ngfx_fill_rect(cr, nfx, cy + 8, 68, 26, 7, ar, ag, ab, ndhov ? 1.0 : 0.92);
     ngfx_text(cr, "Noto Sans", 1, 11.0, nfx + 8, cy + 25, pal.on_acc_r, pal.on_acc_g, pal.on_acc_b, 1, "+ Folder");
     nature_add_hit(st, nfx, cy + 8, 68, 26, HIT_FILES_NEW_DIR, 0, 0);
 
     int vmx = bx + bw - 54;
-    ngfx_fill_rect(cr, vmx, cy + 8, 44, 26, 7, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
+    int vmhov = (st->hover_hit_action == HIT_FILES_VIEW_MODE);
+    ngfx_fill_rect(cr, vmx, cy + 8, 44, 26, 7,
+                   vmhov ? pal.hover_r : pal.elev_r, vmhov ? pal.hover_g : pal.elev_g, vmhov ? pal.hover_b : pal.elev_b, 0.95);
+    if (vmhov) ngfx_stroke_rect(cr, vmx + 0.5, cy + 8.5, 43, 25, 7, 0.8, ar, ag, ab, 0.45);
     ngfx_text(cr, "Noto Sans", 1, 11.0, vmx + 9, cy + 25, fg_r, fg_g, fg_b, 0.9,
               st->files_list_mode ? "Grid" : "List");
     nature_add_hit(st, vmx, cy + 8, 44, 26, HIT_FILES_VIEW_MODE, 0, 0);
@@ -661,7 +685,8 @@ void nature_files_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, in
             nature_add_hit(st, px + 16 + half_w, r_y, half_w, 24, HIT_FILES_DUPLICATE, st->files_selected_idx, 0);
         }
 
-        int bottom_reserved = sn->image_idx >= 0 ? 114 : 82;
+        int is_runnable = (!sn->is_dir && (strcmp(sn->mime_tag, "JS") == 0 || strcmp(sn->mime_tag, "PY") == 0));
+        int bottom_reserved = (sn->image_idx >= 0 || is_runnable) ? 114 : 82;
         if (sn->content[0] && ch > 350) {
             int box_y = cy + 214;
             int box_h = ch - (214 + bottom_reserved);
@@ -689,8 +714,18 @@ void nature_files_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, in
             ngfx_fill_rect(cr, px + 10, btn_y - 32, preview_w - 20, 26, 7, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
             ngfx_text_clipped(cr, "Noto Sans", 1, 10.6, px + 26, btn_y - 15, preview_w - 40, fg_r, fg_g, fg_b, 1.0, "Set Wallpaper");
             nature_add_hit(st, px + 10, btn_y - 32, preview_w - 20, 26, HIT_FILES_SET_WP, sn->image_idx, 0);
+        } else if (is_runnable) {
+            const char *rlbl = (strcmp(sn->mime_tag, "JS") == 0) ? "Run with Node.js" : "Run with Python3";
+            ngfx_fill_rect(cr, px + 10, btn_y - 32, preview_w - 20, 26, 7, pal.elev_r, pal.elev_g, pal.elev_b, 0.95);
+            ngfx_stroke_rect(cr, px + 10.5, btn_y - 31.5, preview_w - 21, 25, 7, 0.8, ar, ag, ab, 0.55);
+            ngfx_text_clipped(cr, "Noto Sans", 1, 10.4, px + 20, btn_y - 15, preview_w - 32,
+                              dark ? pal.ar_hi : ar, dark ? pal.ag_hi : ag, dark ? pal.ab_hi : ab, 1.0, rlbl);
+            nature_add_hit(st, px + 10, btn_y - 32, preview_w - 20, 26, HIT_FILES_RUN_TERM, st->files_selected_idx, 0);
         }
-        const char *act_lbl = sn->is_dir ? "Open Folder" : (sn->image_idx >= 0 || sn->audio_idx >= 0 ? "Open in Media" : "Read File");
+        const char *act_lbl = sn->is_dir ? "Open Folder" :
+                              (sn->video_idx >= 0 ? "Play Video" :
+                               (sn->audio_idx >= 0 ? "Play Audio" :
+                                (sn->image_idx >= 0 ? "Open in Media" : "Read File")));
         ngfx_fill_rect(cr, px + 10, btn_y, preview_w - 20, 28, 7, ar, ag, ab, 0.94);
         double alw = ngfx_text_width(cr, "Noto Sans", 1, 10.6, act_lbl);
         ngfx_text(cr, "Noto Sans", 1, 10.6, px + 10 + ((preview_w - 20) - alw) * 0.5, btn_y + 18, pal.on_acc_r, pal.on_acc_g, pal.on_acc_b, 1, act_lbl);
@@ -775,6 +810,18 @@ void nature_files_render(NatureOSState *st, cairo_t *cr, OSWindow *w, int cx, in
             }
         } else {
             /* Interactive Live Note / Text Editor Mode */
+            int ed_chars = (int)strlen(st->files_edit_buf);
+            int ed_lines = st->files_edit_buf[0] ? 1 : 0;
+            for (int k = 0; st->files_edit_buf[k]; ++k) {
+                if (st->files_edit_buf[k] == '\n') ed_lines++;
+            }
+            if (mw > 420) {
+                char estat[48];
+                snprintf(estat, sizeof(estat), "%d / 767 · %dL", ed_chars, ed_lines);
+                ngfx_fill_rect(cr, mx + mw - 306, my + 8, 100, 22, 6, pal.elev_r, pal.elev_g, pal.elev_b, 0.90);
+                ngfx_text_clipped(cr, "JetBrains Mono", 0, 9.2, mx + mw - 299, my + 22.5, 90, mut_r, mut_g, mut_b, 0.95, estat);
+            }
+
             ngfx_fill_rect(cr, mx + mw - 198, my + 7, 58, 24, 6, pal.success_r, pal.success_g, pal.success_b, 0.95);
             ngfx_text(cr, "Noto Sans", 1, 10.0, mx + mw - 186, my + 23, 1, 1, 1, 1, "Save");
             nature_add_hit(st, mx + mw - 198, my + 7, 58, 24, HIT_FILES_EDIT_SAVE, 0, 0);
@@ -842,15 +889,24 @@ static void open_vfs_node(NatureOSState *st, int idx) {
         st->files_renaming = 0;
         st->files_scroll = 0;
         st->files_query[0] = '\0';
+    } else if (n->video_idx >= 0) {
+        st->media_mode = 1;
+        st->media_folder_idx = 2;
+        st->video_selected = n->video_idx % MAX_VIDEO_CLIPS;
+        st->video_playing = 1;
+        st->video_progress_ms = 0;
+        nature_open_app(st, APP_MEDIA);
     } else if (n->image_idx >= 0) {
         st->media_mode = 0;
+        st->media_folder_idx = 1;
         st->media_grid_mode = 0;
         st->media_selected = n->image_idx;
         st->media_zoom_pct = 100;
         st->media_rotation = 0;
         nature_open_app(st, APP_MEDIA);
     } else if (n->audio_idx >= 0) {
-        st->media_mode = 1;
+        st->media_mode = 2;
+        st->media_folder_idx = 3;
         st->audio_selected = n->audio_idx;
         st->audio_playing = 1;
         st->audio_progress_sec = 0;
@@ -919,7 +975,7 @@ void nature_files_click(NatureOSState *st, const HitRect *hit) {
             snprintf(n->parent, sizeof(n->parent), "%s", st->files_cwd);
             snprintf(n->mime_tag, sizeof(n->mime_tag), "DIR");
             snprintf(n->modified, sizeof(n->modified), "Just now");
-            n->is_dir = 1; n->size_bytes = 4096; n->image_idx = -1; n->audio_idx = -1;
+            n->is_dir = 1; n->size_bytes = 4096; n->image_idx = -1; n->audio_idx = -1; n->video_idx = -1;
             st->files_selected_idx = st->vfs_count - 1;
             st->files_renaming = 0;
             nature_os_save_state(st);
@@ -938,7 +994,7 @@ void nature_files_click(NatureOSState *st, const HitRect *hit) {
             snprintf(n->mime_tag, sizeof(n->mime_tag), "TXT");
             snprintf(n->modified, sizeof(n->modified), "Just now");
             snprintf(n->content, sizeof(n->content), "Nature OS Note #%d\nCreated in Files Manager.\nReady to edit.", idx);
-            n->is_dir = 0; n->size_bytes = 128; n->image_idx = -1; n->audio_idx = -1;
+            n->is_dir = 0; n->size_bytes = 128; n->image_idx = -1; n->audio_idx = -1; n->video_idx = -1;
             st->files_selected_idx = st->vfs_count - 1;
             st->files_renaming = 0;
             st->files_viewer_open = 1;
@@ -1045,6 +1101,20 @@ void nature_files_click(NatureOSState *st, const HitRect *hit) {
             snprintf(cmd, sizeof(cmd), "cat %.120s", st->vfs[idx].path);
             nature_terminal_exec(st, cmd);
         }
+    } else if (hit->action_id == HIT_FILES_RUN_TERM) {
+        int idx = hit->arg0;
+        if (idx >= 0 && idx < st->vfs_count) {
+            st->files_viewer_open = 0;
+            st->files_editing = 0;
+            snprintf(st->term_cwd, sizeof(st->term_cwd), "%s", st->vfs[idx].parent);
+            nature_open_app(st, APP_TERMINAL);
+            char cmd[160];
+            const char *runner = (strcmp(st->vfs[idx].mime_tag, "PY") == 0) ? "python3" : "node";
+            snprintf(cmd, sizeof(cmd), "%s %.120s", runner, st->vfs[idx].path);
+            nature_terminal_exec(st, cmd);
+        }
+    } else if (hit->action_id == HIT_FILES_OPEN_MEDIA) {
+        open_vfs_node(st, hit->arg0);
     } else if (hit->action_id == HIT_FILES_DELETE) {
         int idx = hit->arg0;
         if (idx >= 0 && idx < st->vfs_count) {
@@ -1066,6 +1136,8 @@ void nature_files_click(NatureOSState *st, const HitRect *hit) {
 }
 
 void nature_files_key(NatureOSState *st, const char *key) {
+    if (!key || !*key) return;
+    if (strcmp(key, "Space") == 0) key = " ";
     if (st->active_text_target == 9 && st->files_editing) {
         if (strcmp(key, "Backspace") == 0) {
             size_t len = strlen(st->files_edit_buf);
@@ -1096,6 +1168,9 @@ void nature_files_key(NatureOSState *st, const char *key) {
             if (len > 0) st->files_rename_buf[len - 1] = '\0';
         } else if (strcmp(key, "Enter") == 0) {
             apply_rename(st);
+        } else if (strcmp(key, "Escape") == 0) {
+            st->files_renaming = 0;
+            st->active_text_target = 0;
         } else if (strlen(key) == 1 && (unsigned char)key[0] >= 32 && (unsigned char)key[0] < 127 && key[0] != '/') {
             size_t len = strlen(st->files_rename_buf);
             if (len + 1 < sizeof(st->files_rename_buf)) {
@@ -1104,6 +1179,87 @@ void nature_files_key(NatureOSState *st, const char *key) {
             }
         }
         return;
+    }
+
+    if (strcmp(key, "F2") == 0) {
+        int idx = st->files_selected_idx;
+        if (idx >= 0 && idx < st->vfs_count) {
+            st->files_renaming = 1;
+            snprintf(st->files_rename_buf, sizeof(st->files_rename_buf), "%s", st->vfs[idx].name);
+            st->active_text_target = 7;
+            st->input_focus_pulse = 1;
+        }
+        return;
+    }
+
+    if (strcmp(key, "Delete") == 0) {
+        int idx = st->files_selected_idx;
+        if (idx >= 0 && idx < st->vfs_count) {
+            if (st->files_confirm_delete_idx != idx) {
+                st->files_confirm_delete_idx = idx;
+                nature_notify(st, "Files", "Press Delete again to confirm removal.");
+            } else {
+                for (int j = idx; j < st->vfs_count - 1; ++j) st->vfs[j] = st->vfs[j + 1];
+                st->vfs_count--;
+                st->files_selected_idx = -1;
+                st->files_confirm_delete_idx = -1;
+                st->files_viewer_open = 0;
+                st->files_editing = 0;
+                st->files_renaming = 0;
+                nature_notify(st, "Files", "Item removed.");
+                nature_os_save_state(st);
+            }
+        }
+        return;
+    }
+
+    if (st->active_text_target == 0) {
+        if (strcmp(key, "ArrowUp") == 0 || strcmp(key, "ArrowDown") == 0) {
+            int indices[MAX_VFS];
+            int n_items = 0;
+            for (int i = 0; i < st->vfs_count; ++i) {
+                if (!st->files_show_hidden && st->vfs[i].name[0] == '.') continue;
+                if (strcmp(st->vfs[i].parent, st->files_cwd) == 0 && str_ci_match(st->vfs[i].name, st->files_query)) {
+                    indices[n_items++] = i;
+                }
+            }
+            for (int a = 0; a < n_items; ++a) {
+                for (int b = a + 1; b < n_items; ++b) {
+                    VfsNode *na = &st->vfs[indices[a]];
+                    VfsNode *nb = &st->vfs[indices[b]];
+                    int swap = 0;
+                    if (na->is_dir != nb->is_dir) {
+                        if (!na->is_dir && nb->is_dir) swap = 1;
+                    } else if (st->files_sort_mode == 1) {
+                        if (na->size_bytes < nb->size_bytes) swap = 1;
+                    } else {
+                        if (strcmp(na->name, nb->name) > 0) swap = 1;
+                    }
+                    if (swap) {
+                        int tmp = indices[a]; indices[a] = indices[b]; indices[b] = tmp;
+                    }
+                }
+            }
+            if (n_items > 0) {
+                int pos = -1;
+                for (int k = 0; k < n_items; ++k) {
+                    if (indices[k] == st->files_selected_idx) { pos = k; break; }
+                }
+                if (strcmp(key, "ArrowDown") == 0) {
+                    pos = (pos < 0) ? 0 : (pos + 1 < n_items ? pos + 1 : 0);
+                } else {
+                    pos = (pos <= 0) ? (n_items - 1) : (pos - 1);
+                }
+                st->files_selected_idx = indices[pos];
+            }
+            return;
+        }
+        if ((strcmp(key, "Enter") == 0 || strcmp(key, " ") == 0) &&
+            st->files_selected_idx >= 0 && st->files_selected_idx < st->vfs_count &&
+            strcmp(st->vfs[st->files_selected_idx].parent, st->files_cwd) == 0) {
+            open_vfs_node(st, st->files_selected_idx);
+            return;
+        }
     }
 
     if (strcmp(key, "Backspace") == 0) {

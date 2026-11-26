@@ -180,7 +180,7 @@ export class NaturePreviewerHost {
 
     ws.on('message', (data, isBinary) => {
       if (isBinary) return;
-      const text = data.toString('utf-8').trim();
+      const text = data.toString('utf-8').replace(/^\s+|\r?\n$/g, '');
       if (text) {
         this.sendCommand(text);
       }

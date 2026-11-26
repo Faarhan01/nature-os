@@ -24,6 +24,7 @@ static std::condition_variable g_wake_cv;
 static NatureOSState g_os;
 static int g_force_keyframe = 1;
 static int g_running = 1;
+static auto g_last_activity = std::chrono::steady_clock::now();
 
 static int g_fb_w = OS_WIDTH;
 static int g_fb_h = OS_HEIGHT;
@@ -54,6 +55,9 @@ static void input_reader_thread() {
 
         {
             std::lock_guard<std::mutex> lock(g_state_mtx);
+            if (line[0] != 'Z' && line[0] != 'F' && line[0] != 'Q') {
+                g_last_activity = std::chrono::steady_clock::now();
+            }
             if (line[0] == 'Z') {
                 int rw = 0, rh = 0;
                 if (std::sscanf(line + 1, "%d %d", &rw, &rh) == 2) {
@@ -91,7 +95,9 @@ static void input_reader_thread() {
                     g_os.dirty = 1;
                 }
             } else if (line[0] == 'K' && line[1] == ' ') {
-                nature_os_key(&g_os, line + 2);
+                const char *key_arg = line + 2;
+                if (std::strcmp(key_arg, "Space") == 0) key_arg = " ";
+                nature_os_key(&g_os, key_arg);
                 g_os.dirty = 1;
             } else if (line[0] == 'O') {
                 int app = 0;
@@ -265,15 +271,19 @@ int main(int argc, char **argv) {
             }
 
             auto since_tick = std::chrono::duration_cast<std::chrono::milliseconds>(frame_start - last_tick).count();
-            if (since_tick >= 500) {
+            int mon_ms = (g_os.cfg.telemetry_ms >= 250 && g_os.cfg.telemetry_ms <= 2000) ? g_os.cfg.telemetry_ms : 500;
+            if (since_tick >= mon_ms) {
                 nature_monitor_tick(&g_os);
                 g_os.dirty = 1;
                 last_tick = frame_start;
             }
 
-            if (g_os.audio_playing || (g_os.media_slideshow && g_os.media_mode == 0 && !g_os.media_grid_mode)) {
+            if (g_os.audio_playing ||
+                (g_os.video_playing && g_os.media_mode == 1) ||
+                (g_os.media_slideshow && g_os.media_mode == 0 && !g_os.media_grid_mode)) {
                 auto since_media = std::chrono::duration_cast<std::chrono::milliseconds>(frame_start - last_media_tick).count();
-                if (since_media >= 140) {
+                int media_ms = (g_os.video_playing && g_os.media_mode == 1) ? 50 : 140;
+                if (since_media >= media_ms) {
                     nature_media_tick(&g_os);
                     g_os.dirty = 1;
                     last_media_tick = frame_start;
@@ -282,6 +292,22 @@ int main(int argc, char **argv) {
 
             if (g_os.toast_timer == 1) {
                 g_os.dirty = 1;
+            }
+
+            if (g_os.cfg.auto_lock_min > 0 && !g_os.is_locked &&
+                !g_os.audio_playing && !(g_os.video_playing && g_os.media_mode == 1)) {
+                auto idle_s = std::chrono::duration_cast<std::chrono::seconds>(frame_start - g_last_activity).count();
+                if (idle_s >= static_cast<long long>(g_os.cfg.auto_lock_min) * 60LL) {
+                    g_os.is_locked = 1;
+                    g_os.overview_open = 0;
+                    g_os.launcher_open = 0;
+                    g_os.quick_settings_open = 0;
+                    g_os.calendar_open = 0;
+                    g_os.power_dialog_open = 0;
+                    g_os.alt_tab_open = 0;
+                    g_os.ctx_menu_open = 0;
+                    g_os.dirty = 1;
+                }
             }
 
             if (g_os.dirty || g_force_keyframe) {

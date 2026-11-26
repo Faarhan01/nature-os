@@ -200,14 +200,15 @@ void nature_get_palette(const NatureOSState *st, NaturePalette *out) {
     }
 
     /* Design Tokens */
-    out->r_win = NTHEME_RADIUS_WIN;
-    out->r_card = NTHEME_RADIUS_CARD;
+    int compact = (st && st->cfg.compact_chrome) ? 1 : 0;
+    out->r_win = compact ? 9.0 : NTHEME_RADIUS_WIN;
+    out->r_card = compact ? 8.0 : NTHEME_RADIUS_CARD;
     out->r_btn = NTHEME_RADIUS_BTN;
     out->r_pill = NTHEME_RADIUS_PILL;
     out->r_dock = NTHEME_RADIUS_DOCK;
     out->card_alpha = 0.96;
     out->elev_alpha = 0.94;
-    out->shadow_alpha = dark ? 0.38 : 0.18;
+    out->shadow_alpha = dark ? 0.42 : 0.18;
 }
 
 void ntheme_draw_card(cairo_t *cr, double x, double y, double w, double h, double r,
@@ -223,7 +224,7 @@ void ntheme_draw_card(cairo_t *cr, double x, double y, double w, double h, doubl
                      selected ? pal->ar : (hovered ? pal->ar : pal->border_r),
                      selected ? pal->ag : (hovered ? pal->ag : pal->border_g),
                      selected ? pal->ab : (hovered ? pal->ab : pal->border_b),
-                     selected ? 0.85 : (hovered ? 0.50 : pal->border_a));
+                     selected ? 0.85 : (hovered ? 0.55 : pal->border_a));
     ngfx_top_specular(cr, x, y, w, r, pal->dark_mode ? 0.14 : 0.40);
 }
 
@@ -364,4 +365,31 @@ void ntheme_draw_avatar(cairo_t *cr, cairo_surface_t *img, double x, double y, d
 void ntheme_draw_modal_scrim(cairo_t *cr, double w, double h, double alpha) {
     if (alpha <= 0.0) return;
     ngfx_fill_rect(cr, 0, 0, w, h, 0, 0.02, 0.03, 0.04, alpha);
+}
+
+void ntheme_draw_section_header(cairo_t *cr, double x, double y, double w,
+                                const NaturePalette *pal, const char *title, const char *right_meta) {
+    if (title && *title) {
+        ngfx_text(cr, "Noto Sans", 1, 10.2, x, y + 11, pal->mut_r, pal->mut_g, pal->mut_b, 0.95, title);
+    }
+    if (right_meta && *right_meta) {
+        double rw = ngfx_text_width(cr, "JetBrains Mono", 0, 9.5, right_meta);
+        ngfx_text(cr, "JetBrains Mono", 0, 9.5, x + w - rw, y + 11, pal->mut_r, pal->mut_g, pal->mut_b, 0.88, right_meta);
+    }
+    ngfx_fill_rect(cr, x, y + 16, w, 1, 0, pal->border_r, pal->border_g, pal->border_b, pal->border_a);
+}
+
+void ntheme_draw_kbd_chip(cairo_t *cr, double x, double y, double h,
+                          const NaturePalette *pal, const char *key_label, double *out_w) {
+    const char *lbl = (key_label && *key_label) ? key_label : "";
+    double tw = ngfx_text_width(cr, "JetBrains Mono", 1, 9.8, lbl);
+    double w = tw + 14.0;
+    if (w < 22.0) w = 22.0;
+    ngfx_fill_rect(cr, x, y + 1.0, w, h, 5.0, 0.0, 0.0, 0.0, pal->dark_mode ? 0.35 : 0.12);
+    ngfx_fill_rect(cr, x, y, w, h, 5.0, pal->elev_r, pal->elev_g, pal->elev_b, 0.98);
+    ngfx_stroke_rect(cr, x + 0.5, y + 0.5, w - 1.0, h - 1.0, 5.0, 0.9,
+                     pal->strong_brd_r, pal->strong_brd_g, pal->strong_brd_b, pal->strong_brd_a);
+    ngfx_text(cr, "JetBrains Mono", 1, 9.8, x + (w - tw) * 0.5, y + h * 0.5 + 3.5,
+              pal->fg_r, pal->fg_g, pal->fg_b, 0.96, lbl);
+    if (out_w) *out_w = w;
 }
