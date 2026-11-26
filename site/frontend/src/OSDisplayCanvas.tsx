@@ -611,6 +611,15 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
     sendCommand(`R ${x} ${y}`);
   };
 
+  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.currentTarget.focus({preventScroll: true});
+    const {x, y} = toOsCoords(e.clientX, e.clientY);
+    sendCommand(`D ${x} ${y}`);
+    window.setTimeout(() => {
+      sendCommand(`U ${x} ${y}`);
+    }, 45);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
     if (e.key === 'Meta' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Shift') return;
     if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'l' || e.key === 'L' || e.key === 'u' || e.key === 'U')) {
@@ -768,6 +777,7 @@ export const OSDisplayCanvas = forwardRef<CanvasHandle, OSDisplayCanvasProps>(fu
           onPointerCancel={handlePointerCancel}
           onWheel={handleWheel}
           onContextMenu={handleContextMenu}
+          onClick={handleClick}
           onKeyDown={handleKeyDown}
           style={{touchAction: 'none', imageRendering: 'crisp-edges'}}
           className="h-full w-full cursor-default select-none outline-none"
